@@ -297,8 +297,8 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onCancel
                     }`}>
                     {/* Custom Radio/Check */}
                     <div className={`mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center transition-colors flex-shrink-0 ${isSelected
-                        ? 'border-transparent bg-white shadow-sm'
-                        : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700'
+                      ? 'border-transparent bg-white shadow-sm'
+                      : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700'
                       }`}>
                       {isSelected && <div className={`w-2.5 h-2.5 rounded-full ${dotBgClass}`} />}
                     </div>
@@ -342,7 +342,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onCancel
                                overflow-hidden transition-all duration-300 ease-in-out
                                ${isExpanded ? 'max-h-20 opacity-100 mt-1.5' : 'max-h-0 opacity-0'}
                              `}>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 ml-7 bg-slate-50 dark:bg-slate-750/50 p-2 rounded border border-slate-100 dark:border-slate-700">
+                              <p className="text-xs font-medium text-slate-700 dark:text-slate-200 ml-7 bg-white dark:bg-slate-900/50 p-3 rounded-md border border-slate-200 dark:border-slate-600 shadow-sm">
                                 {descItem.detail}
                               </p>
                             </div>
