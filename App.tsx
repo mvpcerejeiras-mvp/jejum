@@ -65,6 +65,10 @@ const App: React.FC = () => {
   };
 
   const getLogoComponent = (id: string) => {
+    if (id?.startsWith('http')) {
+      return <img src={id} alt="Logo" className="w-16 h-16 object-contain" />;
+    }
+
     const props = { className: "w-10 h-10 text-orange-300" };
     switch (id) {
       case 'cross': return <Cross {...props} />;

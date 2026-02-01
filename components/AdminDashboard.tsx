@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getParticipants, getSettings, saveSettings } from '../services/db';
+import { getParticipants, getSettings, saveSettings, uploadLogo } from '../services/db';
 import { Participant, AppSettings, FastTime } from '../types';
 import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical } from 'lucide-react';
 import { TIME_OPTIONS, TYPE_DESCRIPTIONS, DEFAULT_DAYS } from '../constants';
@@ -46,6 +46,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
     await saveSettings(settings);
     onSettingsChange();
     alert('Configurações salvas!');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const publicUrl = await uploadLogo(file);
+      if (publicUrl) {
+        setSettings({ ...settings, logoId: publicUrl });
+      } else {
+        alert('Erro ao enviar imagem. Tente novamente.');
+      }
+    }
   };
 
   const handleDayChange = (index: number, value: string) => {
@@ -573,15 +585,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                       key={logo.id}
                       onClick={() => setSettings({ ...settings, logoId: logo.id })}
                       className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all w-20 h-20 ${settings.logoId === logo.id
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-200 dark:ring-indigo-800'
-                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600'
+                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-200 dark:ring-indigo-800'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600'
                         }`}
                     >
                       {logo.component}
                       <span className="text-xs mt-2 font-medium">{logo.label}</span>
                     </button>
                   ))}
+
+                  {/* Upload Option */}
+                  <label className="cursor-pointer flex flex-col items-center justify-center p-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all w-20 h-20">
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                    />
+                    <span className="text-2xl text-slate-400 dark:text-slate-500">+</span>
+                    <span className="text-xs mt-1 font-medium text-slate-500 dark:text-slate-400">Upload</span>
+                  </label>
                 </div>
+
+                {/* Preview custom logo text */}
+                {settings.logoId?.startsWith('http') && (
+                  <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    Logo personalizada selecionada.
+                  </div>
+                )}
               </div>
 
               <h3 className="font-semibold text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2 pt-4">Conteúdo</h3>

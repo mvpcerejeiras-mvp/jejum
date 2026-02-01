@@ -125,3 +125,23 @@ export const saveSettings = async (settings: AppSettings): Promise<{ success: bo
     return { success: !error };
   }
 };
+
+export const uploadLogo = async (file: File): Promise<string | null> => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `logo-${Date.now()}.${fileExt}`;
+
+  const { data, error } = await supabase.storage
+    .from('logos')
+    .upload(fileName, file);
+
+  if (error) {
+    console.error('Error uploading logo:', error);
+    return null;
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('logos')
+    .getPublicUrl(fileName);
+
+  return publicUrl;
+};
