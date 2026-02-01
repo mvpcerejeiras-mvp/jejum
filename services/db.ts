@@ -147,15 +147,20 @@ export const uploadLogo = async (file: File): Promise<string | null> => {
 };
 
 export const deleteParticipant = async (id: string): Promise<{ success: boolean; message?: string }> => {
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from('participants')
-    .delete()
+    .delete({ count: 'exact' }) // Request exact count of deleted rows
     .eq('id', id);
 
   if (error) {
     console.error('Error deleting participant:', error);
-    return { success: false, message: 'Erro ao excluir participante.' };
+    return { success: false, message: 'Erro ao excluir participant.' };
   }
+
+  if (count === 0) {
+    return { success: false, message: 'Erro: Não foi possível excluir. Verifique as permissões ou se o item já foi removido.' };
+  }
+
   return { success: true };
 };
 
