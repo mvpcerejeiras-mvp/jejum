@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import RegistrationForm from './components/RegistrationForm';
 import AdminDashboard from './components/AdminDashboard';
 import HomeDashboard from './components/HomeDashboard';
+import WeeklySchedule from './components/WeeklySchedule';
 import { getSettings } from './services/db';
 import { DEFAULT_THEME, DEFAULT_INSTRUCTION, DEFAULT_APP_TITLE, DEFAULT_LOGO, DEFAULT_DAYS } from './constants';
 import { Flame, Lock, Cross, BookOpen, Heart, Sun, Mountain, Star, Moon } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'home' | 'form' | 'admin' | 'login'>('home');
+  const [view, setView] = useState<'home' | 'form' | 'admin' | 'login' | 'schedule'>('home');
   const [password, setPassword] = useState('');
   const [appSettings, setAppSettings] = useState({
     theme: DEFAULT_THEME,
@@ -132,6 +133,7 @@ const App: React.FC = () => {
             <div className="p-6 md:p-8">
               <HomeDashboard
                 onJoin={() => setView('form')}
+                onViewSchedule={() => setView('schedule')}
                 fastDays={appSettings.fastDays}
               />
             </div>
@@ -147,6 +149,15 @@ const App: React.FC = () => {
               <RegistrationForm
                 onSuccess={() => setView('home')}
                 onCancel={() => setView('home')}
+                fastDays={appSettings.fastDays}
+              />
+            </div>
+          )}
+
+          {view === 'schedule' && (
+            <div className="p-6 md:p-8">
+              <WeeklySchedule
+                onBack={() => setView('home')}
                 fastDays={appSettings.fastDays}
               />
             </div>

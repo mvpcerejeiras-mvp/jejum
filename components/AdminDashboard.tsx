@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getParticipants, getSettings, saveSettings, uploadLogo } from '../services/db';
+import { getParticipants, getSettings, saveSettings, uploadLogo, updateParticipant, deleteParticipant } from '../services/db';
 import { Participant, AppSettings, FastTime } from '../types';
-import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical } from 'lucide-react';
+import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical, Pencil, Trash, X } from 'lucide-react';
 import { TIME_OPTIONS, TYPE_DESCRIPTIONS, DEFAULT_DAYS } from '../constants';
 
 interface AdminDashboardProps {
@@ -57,6 +57,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
       } else {
         alert('Erro ao enviar imagem. Tente novamente.');
       }
+    }
+  };
+
+  // CRUD State
+  const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null);
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir esse participante?')) {
+      const res = await deleteParticipant(id);
+      if (res.success) {
+        setParticipants(participants.filter(p => p.id !== id));
+      } else {
+        alert(res.message || 'Erro ao excluir');
+      }
+    }
+  };
+
+  const handleEditClick = (participant: Participant) => {
+    setEditingParticipant({ ...participant });
+  };
+
+  const handleUpdate = async () => {
+    if (!editingParticipant) return;
+
+    // Optimistic Update
+    const res = await updateParticipant(editingParticipant.id!, editingParticipant);
+    if (res.success) {
+      setParticipants(participants.map(p => p.id === editingParticipant.id ? editingParticipant : p));
+      setEditingParticipant(null);
+    } else {
+      alert(res.message || 'Erro ao atualizar');
     }
   };
 
@@ -249,6 +280,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
             );
           })}
         </div>
+
+
       </div>
     );
   };
@@ -333,12 +366,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                       <th className="px-4 py-3">Dia(s)</th>
                       <th className="px-4 py-3">Tipo</th>
                       <th className="px-4 py-3">Data</th>
+                      <th className="px-4 py-3 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                     {filteredParticipants.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
+                        <td colSpan={5} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
                           Nenhum participante encontrado.
                         </td>
                       </tr>
@@ -365,6 +399,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                           </td>
                           <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">
                             {new Date(p.createdAt).toLocaleDateString('pt-BR')}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => handleEditClick(p)}
+                                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition"
+                                title="Editar"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(p.id!)}
+                                className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition"
+                                title="Excluir"
+                              >
+                                <Trash size={16} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -650,6 +702,68 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {editingParticipant && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-fade-in-up">
+            <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Editar Participante</h3>
+              <button onClick={() => setEditingParticipant(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                  value={editingParticipant.name}
+                  onChange={e => setEditingParticipant({ ...editingParticipant, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Telefone</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                  value={editingParticipant.phone}
+                  onChange={e => setEditingParticipant({ ...editingParticipant, phone: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Jejum</label>
+                <select
+                  className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                  value={editingParticipant.type}
+                  onChange={e => setEditingParticipant({ ...editingParticipant, type: e.target.value })}
+                >
+                  {TYPE_DESCRIPTIONS.map(t => (
+                    <option key={t.id} value={t.id}>{t.title}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-2">
+              <button
+                onClick={() => setEditingParticipant(null)}
+                className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleUpdate}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700"
+              >
+                Salvar Alterações
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

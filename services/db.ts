@@ -145,3 +145,35 @@ export const uploadLogo = async (file: File): Promise<string | null> => {
 
   return publicUrl;
 };
+
+export const deleteParticipant = async (id: string): Promise<{ success: boolean; message?: string }> => {
+  const { error } = await supabase
+    .from('participants')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting participant:', error);
+    return { success: false, message: 'Erro ao excluir participante.' };
+  }
+  return { success: true };
+};
+
+export const updateParticipant = async (id: string, data: Partial<Participant>): Promise<{ success: boolean; message?: string }> => {
+  const { error } = await supabase
+    .from('participants')
+    .update({
+      name: data.name,
+      phone: data.phone,
+      days: data.days,
+      time: data.time,
+      type: data.type
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error updating participant:', error);
+    return { success: false, message: 'Erro ao atualizar participante.' };
+  }
+  return { success: true };
+};
