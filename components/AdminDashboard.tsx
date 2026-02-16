@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getParticipants, getSettings, saveSettings, uploadLogo, updateParticipant, deleteParticipant } from '../services/db';
-import { Participant, AppSettings, FastTime } from '../types';
-import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical, Pencil, Trash, X } from 'lucide-react';
+import { PrayerCampaignManager } from './PrayerCampaignManager';
+import { getParticipants, getSettings, saveSettings, uploadLogo, updateParticipant, deleteParticipant, getMembers, saveMember, updateMember, deleteMember, migrateParticipantsToMembers, deleteAllMembers, archiveCurrentFast, getMemberHistory } from '../services/db';
+import { Participant, AppSettings, FastTime, Member, FastingHistory } from '../types';
+import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical, Pencil, Trash, X, RefreshCw, Archive, History } from 'lucide-react';
 import { TIME_OPTIONS, TYPE_DESCRIPTIONS, DEFAULT_DAYS } from '../constants';
 
 interface AdminDashboardProps {
@@ -20,8 +21,9 @@ const LOGO_OPTIONS = [
 ];
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsChange }) => {
-  const [activeTab, setActiveTab] = useState<'participants' | 'settings' | 'analytics'>('participants');
+  const [activeTab, setActiveTab] = useState<'participants' | 'settings' | 'analytics' | 'members' | 'prayer-clock' | 'prayer-campaigns'>('participants');
   const [participants, setParticipants] = useState<Participant[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
   const [settings, setSettings] = useState<AppSettings>({ theme: '', instruction: '', appTitle: '', logoId: '', fastDays: [] });
 
   // Filters
@@ -36,6 +38,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
     const loadData = async () => {
       const parts = await getParticipants();
       setParticipants(parts);
+      const mems = await getMembers();
+      setMembers(mems);
       const sets = await getSettings();
       setSettings(sets);
     };
@@ -214,6 +218,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
     return '#64748b';
   };
 
+  const handleArchiveFast = async () => {
+    const eventName = prompt('Digite o nome deste evento para salvar no histórico (ex: "Jejum Março 2026"):');
+    if (!eventName) return;
+
+    if (confirm(`ATENÇÃO: Você está prestes a encerrar o evento "${eventName}".\n\n1. Todos os participantes atuais serão salvos no histórico.\n2. Quem não for membro será cadastrado automaticamente.\n3. A lista de participantes atual será LIMPA.\n\nDeseja continuar?`)) {
+      const res = await archiveCurrentFast(eventName);
+      if (res.success) {
+        alert(res.message);
+        setParticipants([]); // Clear local state
+        // Refresh members to get any new ones
+        const mems = await getMembers();
+        setMembers(mems);
+      } else {
+        alert(res.message);
+      }
+    }
+  };
+
+  // --- Member History Helpers ---
+  const [historyMember, setHistoryMember] = useState<Member | null>(null);
+  const [memberHistory, setMemberHistory] = useState<FastingHistory[]>([]);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
+  const openHistoryModal = async (member: Member) => {
+    setHistoryMember(member);
+    setIsHistoryModalOpen(true);
+    const history = await getMemberHistory(member.id);
+    setMemberHistory(history);
+  };
+
   // SVG Pie Chart Helper
   const renderPieChart = (counts: [string, number][]) => {
     const total = counts.reduce((sum, item) => sum + item[1], 0);
@@ -286,6 +320,82 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
     );
   };
 
+  // --- Member CRUD Helpers ---
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
+  const [memberForm, setMemberForm] = useState<{ name: string; phone: string }>({ name: '', phone: '' });
+
+  const openMemberModal = (member?: Member) => {
+    if (member) {
+      setEditingMember(member);
+      setMemberForm({ name: member.name, phone: member.phone });
+    } else {
+      setEditingMember(null);
+      setMemberForm({ name: '', phone: '' });
+    }
+    setIsMemberModalOpen(true);
+  };
+
+  const handleSaveMember = async () => {
+    if (!memberForm.name || !memberForm.phone) return alert('Preencha nome e telefone');
+
+    if (editingMember) {
+      const res = await updateMember(editingMember.id, memberForm);
+      if (res.success) {
+        setMembers(members.map(m => m.id === editingMember.id ? { ...m, ...memberForm } as Member : m));
+        setIsMemberModalOpen(false);
+      } else alert(res.message);
+    } else {
+      const res = await saveMember(memberForm);
+      if (res.success) {
+        const updated = await getMembers();
+        setMembers(updated);
+        setIsMemberModalOpen(false);
+      } else alert(res.message || 'Erro ao salvar');
+    }
+  };
+
+  const handleDeleteMember = async (id: string) => {
+    if (confirm('Tem certeza que deseja excluir este membro?')) {
+      const res = await deleteMember(id);
+      if (res.success) {
+        setMembers(members.filter(m => m.id !== id));
+      } else alert(res.message);
+    }
+  };
+
+  const handleSyncMembers = async () => {
+    if (confirm('Deseja importar todos os participantes atuais para a lista de membros? Isso não criará duplicatas.')) {
+      const res = await migrateParticipantsToMembers();
+      if (res.success) {
+        alert(res.message + (res.count ? ` (${res.count} adicionados)` : ''));
+        const updated = await getMembers();
+        setMembers(updated);
+      } else {
+        alert(res.message);
+      }
+    }
+  };
+
+  const handleDeleteAllMembers = async () => {
+    if (confirm('ATENÇÃO: Tem certeza absoluta que deseja excluir TODOS os membros cadastrados? Esta ação não pode ser desfeita.')) {
+      if (confirm('Confirmação final: Deseja realmente apagar todo o banco de membros?')) {
+        const res = await deleteAllMembers();
+        if (res.success) {
+          alert(res.message);
+          setMembers([]);
+        } else {
+          alert(res.message);
+        }
+      }
+    }
+  };
+
+  const filteredMembers = members.filter(m =>
+    m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    m.phone.includes(searchTerm)
+  );
+
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl overflow-hidden min-h-[600px] flex flex-col transition-colors">
       {/* Admin Header */}
@@ -306,6 +416,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
           className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 min-w-[140px] transition-colors ${activeTab === 'participants' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
         >
           <Users size={18} /> Participantes
+        </button>
+        <button
+          onClick={() => setActiveTab('members')}
+          className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 min-w-[140px] transition-colors ${activeTab === 'members' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+        >
+          <BookOpen size={18} /> Membros
+        </button>
+        <button
+          onClick={() => setActiveTab('prayer-clock')}
+          className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 min-w-[140px] transition-colors ${activeTab === 'prayer-clock' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+        >
+          <Clock size={18} /> Relógio
+        </button>
+        <button
+          onClick={() => setActiveTab('prayer-campaigns')}
+          className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 min-w-[140px] transition-colors ${activeTab === 'prayer-campaigns' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
+        >
+          <List size={18} /> Campanhas
         </button>
         <button
           onClick={() => setActiveTab('analytics')}
@@ -348,6 +476,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                   {settings.fastDays.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
+              <button
+                onClick={handleArchiveFast}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-md text-sm font-medium hover:bg-slate-900 border border-slate-700"
+                title="Encerrar evento atual e arquivar histórico"
+              >
+                <Archive size={16} /> Encerrar Jejum Atual
+              </button>
               <button
                 onClick={exportCSV}
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
@@ -573,6 +708,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
           </div>
         )}
 
+        {/* --- PRAYER CLOCK TAB --- */}
+        {activeTab === 'prayer-clock' && (
+          <div className="max-w-4xl mx-auto">
+            <PrayerCampaignManager />
+          </div>
+        )}
+
         {/* --- SETTINGS TAB --- */}
         {activeTab === 'settings' && (
           <div className="space-y-6 max-w-2xl mx-auto">
@@ -701,7 +843,161 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
             </div>
           </div>
         )}
+
+        {/* --- MEMBERS TAB --- */}
+        {activeTab === 'members' && (
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row gap-3 justify-between bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Buscar membro..."
+                  className="pl-9 w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleDeleteAllMembers}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-md text-sm font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
+                  title="Excluir todos os membros"
+                >
+                  <Trash2 size={16} /> <span className="hidden sm:inline">Excluir Todos</span>
+                </button>
+                <button
+                  onClick={handleSyncMembers}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-md text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600"
+                  title="Importar participantes da lista de jejum para membros"
+                >
+                  <RefreshCw size={16} /> <span className="hidden sm:inline">Sincronizar</span>
+                </button>
+                <button
+                  onClick={() => openMemberModal()}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
+                >
+                  <Plus size={16} /> Novo Membro
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-100 dark:bg-slate-900/50 text-slate-600 dark:text-slate-300 font-semibold uppercase text-xs">
+                  <tr>
+                    <th className="px-4 py-3">Nome</th>
+                    <th className="px-4 py-3">WhatsApp</th>
+                    <th className="px-4 py-3">Data Cadastro</th>
+                    <th className="px-4 py-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  {filteredMembers.length === 0 ? (
+                    <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-400">Nenhum membro encontrado.</td></tr>
+                  ) : (
+                    filteredMembers.map(m => (
+                      <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{m.name}</td>
+                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{m.phone}</td>
+                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{new Date(m.createdAt).toLocaleDateString('pt-BR')}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button onClick={() => openHistoryModal(m)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded" title="Ver Histórico"><History size={16} /></button>
+                            <button onClick={() => openMemberModal(m)} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded" title="Editar"><Pencil size={16} /></button>
+                            <button onClick={() => handleDeleteMember(m.id)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded" title="Excluir"><Trash size={16} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* History Modal */}
+      {isHistoryModalOpen && historyMember && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+              <div>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Histórico de Participação</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{historyMember.name} • {historyMember.phone}</p>
+              </div>
+              <button onClick={() => setIsHistoryModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={20} /></button>
+            </div>
+            <div className="p-0 overflow-y-auto flex-1">
+              {memberHistory.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 dark:text-slate-500">
+                  <History className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                  Nenhum histórico encontrado para este membro.
+                </div>
+              ) : (
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-100 dark:bg-slate-900/50 text-slate-600 dark:text-slate-300 font-semibold uppercase text-xs sticky top-0">
+                    <tr>
+                      <th className="px-6 py-3">Evento</th>
+                      <th className="px-6 py-3">Tipo</th>
+                      <th className="px-6 py-3">Dias</th>
+                      <th className="px-6 py-3 text-right">Data Arquivamento</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {memberHistory.map(h => (
+                      <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">{h.eventName}</td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                            {h.type.split('–')[0]}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-300 text-xs">
+                          {h.days.map(d => d.split(' – ')[0]).join(', ')}
+                        </td>
+                        <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-400 text-xs">
+                          {new Date(h.archivedAt).toLocaleDateString('pt-BR')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end">
+              <button onClick={() => setIsHistoryModalOpen(false)} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700">Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Member Modal */}
+      {isMemberModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-fade-in-up">
+            <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{editingMember ? 'Editar Membro' : 'Novo Membro'}</h3>
+              <button onClick={() => setIsMemberModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={20} /></button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome</label>
+                <input type="text" className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={memberForm.name} onChange={e => setMemberForm({ ...memberForm, name: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">WhatsApp</label>
+                <input type="text" className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={memberForm.phone} onChange={e => setMemberForm({ ...memberForm, phone: e.target.value })} placeholder="(00) 00000-0000" />
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-2">
+              <button onClick={() => setIsMemberModalOpen(false)} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-sm">Cancelar</button>
+              <button onClick={handleSaveMember} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700">Salvar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Modal */}
       {editingParticipant && (

@@ -40,9 +40,47 @@ export interface AppSettings {
   fastDays: string[]; // List of active fasting days
 }
 
+export interface Member {
+  id: string;
+  name: string;
+  phone: string;
+  createdAt: string;
+}
+
+export interface FastingHistory {
+  id: string;
+  memberId: string;
+  eventName: string;
+  days: string[];
+  type: string;
+  archivedAt: string;
+}
+
 export interface FastTypeDescription {
   id: FastType;
   title: string;
   color: string;
   description: { text: string; detail: string }[];
+}
+
+export interface PrayerCampaign {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  duration: 12 | 48;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface PrayerSignup {
+  id: string;
+  campaignId: string;
+  memberId: string;
+  slotNumber: number;
+  createdAt: string;
+  member?: {
+    name: string;
+    phone: string;
+  };
 }

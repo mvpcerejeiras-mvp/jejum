@@ -3,12 +3,13 @@ import RegistrationForm from './components/RegistrationForm';
 import AdminDashboard from './components/AdminDashboard';
 import HomeDashboard from './components/HomeDashboard';
 import WeeklySchedule from './components/WeeklySchedule';
+import { PrayerClock } from './components/PrayerClock';
 import { getSettings } from './services/db';
 import { DEFAULT_THEME, DEFAULT_INSTRUCTION, DEFAULT_APP_TITLE, DEFAULT_LOGO, DEFAULT_DAYS } from './constants';
 import { Flame, Lock, Cross, BookOpen, Heart, Sun, Mountain, Star, Moon } from 'lucide-react';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'home' | 'form' | 'admin' | 'login' | 'schedule'>('home');
+  const [view, setView] = useState<'home' | 'form' | 'admin' | 'login' | 'schedule' | 'clock'>('home');
   const [password, setPassword] = useState('');
   const [appSettings, setAppSettings] = useState({
     theme: DEFAULT_THEME,
@@ -134,6 +135,7 @@ const App: React.FC = () => {
               <HomeDashboard
                 onJoin={() => setView('form')}
                 onViewSchedule={() => setView('schedule')}
+                onViewClock={() => setView('clock')}
                 fastDays={appSettings.fastDays}
               />
             </div>
@@ -160,6 +162,18 @@ const App: React.FC = () => {
                 onBack={() => setView('home')}
                 fastDays={appSettings.fastDays}
               />
+            </div>
+          )}
+
+          {view === 'clock' && (
+            <div className="relative">
+              <button
+                onClick={() => setView('home')}
+                className="absolute top-4 left-4 z-10 p-2 bg-white/80 rounded-full shadow-sm hover:bg-white text-gray-600"
+              >
+                ← Voltar
+              </button>
+              <PrayerClock />
             </div>
           )}
 

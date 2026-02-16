@@ -7,10 +7,11 @@ import { Users, ArrowRight, Activity, PieChart, Clock, Zap } from 'lucide-react'
 interface HomeDashboardProps {
   onJoin: () => void;
   onViewSchedule: () => void;
+  onViewClock: () => void;
   fastDays: string[];
 }
 
-const HomeDashboard: React.FC<HomeDashboardProps> = ({ onJoin, onViewSchedule, fastDays }) => {
+const HomeDashboard: React.FC<HomeDashboardProps> = ({ onJoin, onViewSchedule, onViewClock, fastDays }) => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [animateBars, setAnimateBars] = useState(false);
 
@@ -84,6 +85,13 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ onJoin, onViewSchedule, f
             >
               <Activity size={18} />
               <span>Ver Escala</span>
+            </button>
+            <button
+              onClick={onViewClock}
+              className="flex items-center justify-center gap-2 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 px-5 py-2.5 rounded-xl font-medium border border-indigo-100 dark:border-indigo-900/50 hover:bg-indigo-50 dark:hover:bg-slate-600 transition-all hover:scale-105 active:scale-95"
+            >
+              <Clock size={18} />
+              <span>Relógio</span>
             </button>
             <button
               onClick={onJoin}
