@@ -124,13 +124,13 @@ export function PrayerCampaignManager() {
 
                 <div className="mt-4">
                     <h5 className="font-semibold text-sm mb-2">Lista de Inscritos</h5>
-                    <div className="max-h-60 overflow-y-auto border rounded bg-gray-50 p-2">
+                    <div className="max-h-60 overflow-y-auto border rounded bg-gray-50 dark:bg-slate-900/50 p-2 border-gray-200 dark:border-slate-700">
                         {selectedSignups.length === 0 ? (
-                            <p className="text-gray-500 text-sm text-center">Nenhum inscrito ainda.</p>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm text-center">Nenhum inscrito ainda.</p>
                         ) : (
-                            <table className="w-full text-sm text-left">
+                            <table className="w-full text-sm text-left text-slate-700 dark:text-slate-300">
                                 <thead>
-                                    <tr className="border-b">
+                                    <tr className="border-b border-gray-200 dark:border-slate-700">
                                         <th className="py-1">Hora</th>
                                         <th className="py-1">Nome</th>
                                         <th className="py-1">WhatsApp</th>
@@ -138,9 +138,10 @@ export function PrayerCampaignManager() {
                                 </thead>
                                 <tbody>
                                     {selectedSignups.sort((a, b) => a.slotNumber - b.slotNumber).map(s => (
-                                        <tr key={s.id} className="border-b last:border-0 hover:bg-gray-100">
-                                            <td className="py-1 font-mono">{s.slotNumber}h</td>
-                                            <td className="py-1">{s.member?.name || 'Desconhecido'}</td>
+                                        <tr key={s.id} className="border-b last:border-0 border-gray-100 dark:border-slate-800 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
+                                            <td className="py-1 font-mono text-indigo-600 dark:text-indigo-400">{s.slotNumber}h</td>
+                                            <td className="py-1 font-medium">{s.member?.name || 'Desconhecido'}</td>
+
                                             <td className="py-1">{s.member?.phone || '-'}</td>
                                         </tr>
                                     ))}
@@ -174,22 +175,22 @@ export function PrayerCampaignManager() {
             ) : (
                 <div className="grid gap-4">
                     {campaigns.map(campaign => (
-                        <div key={campaign.id} className={`bg-white p-4 rounded-lg shadow border ${selectedCampaignId === campaign.id ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-gray-200'}`}>
+                        <div key={campaign.id} className={`bg-white dark:bg-slate-800 p-4 rounded-lg shadow border transition-colors ${selectedCampaignId === campaign.id ? 'border-indigo-500 ring-1 ring-indigo-500 dark:border-indigo-400 dark:ring-indigo-400' : 'border-gray-200 dark:border-slate-700'}`}>
                             <div className="flex justify-between items-start">
                                 <div
                                     className="cursor-pointer flex-1"
                                     onClick={() => setSelectedCampaignId(selectedCampaignId === campaign.id ? null : campaign.id)}
                                 >
                                     <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-lg">{campaign.title}</h3>
+                                        <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{campaign.title}</h3>
                                         {campaign.isActive ? (
-                                            <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">Ativa</span>
+                                            <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800">Ativa</span>
                                         ) : (
-                                            <span className="bg-gray-100 text-gray-800 text-xs px-2 py-0.5 rounded-full">Encerrada</span>
+                                            <span className="bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-300 text-xs px-2 py-0.5 rounded-full border border-gray-200 dark:border-slate-600">Encerrada</span>
                                         )}
-                                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">{campaign.duration} Horas</span>
+                                        <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">{campaign.duration} Horas</span>
                                     </div>
-                                    <p className="text-gray-500 text-sm mt-1 flex items-center gap-2">
+                                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 flex items-center gap-2">
                                         <Calendar size={14} />
                                         Início: {new Date(campaign.startDate).toLocaleDateString()} às {new Date(campaign.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </p>
@@ -198,14 +199,14 @@ export function PrayerCampaignManager() {
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => handleToggleStatus(campaign.id, campaign.isActive)}
-                                        className={`p-2 rounded hover:bg-gray-100 ${campaign.isActive ? 'text-orange-600' : 'text-green-600'}`}
+                                        className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors ${campaign.isActive ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}
                                         title={campaign.isActive ? "Pausar/Encerrar" : "Reativar"}
                                     >
                                         {campaign.isActive ? <Pause size={18} /> : <Play size={18} />}
                                     </button>
                                     <button
                                         onClick={() => handleDelete(campaign.id)}
-                                        className="p-2 rounded hover:bg-red-50 text-red-600"
+                                        className="p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
                                         title="Excluir"
                                     >
                                         <Trash2 size={18} />
@@ -218,7 +219,7 @@ export function PrayerCampaignManager() {
                     ))}
 
                     {campaigns.length === 0 && (
-                        <div className="text-center py-8 text-gray-500 bg-gray-50 rounded border border-dashed text-sm">
+                        <div className="text-center py-8 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-slate-800/50 rounded border border-dashed border-gray-200 dark:border-slate-700 text-sm">
                             Nenhuma campanha de oração criada. Clique em "Nova Campanha" para começar.
                         </div>
                     )}
@@ -297,7 +298,7 @@ export function PrayerCampaignManager() {
                                 <button
                                     type="button"
                                     onClick={() => setShowNewModal(false)}
-                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                                    className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
                                 >
                                     Cancelar
                                 </button>

@@ -113,11 +113,11 @@ export function PrayerClock() {
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
             <div className="text-center mb-10">
-                <h1 className="text-3xl md:text-5xl font-black text-indigo-900 mb-4 flex items-center justify-center gap-3">
-                    <Clock className="w-8 h-8 md:w-12 md:h-12 text-indigo-600" />
+                <h1 className="text-3xl md:text-5xl font-black text-indigo-900 dark:text-indigo-400 mb-4 flex items-center justify-center gap-3">
+                    <Clock className="w-8 h-8 md:w-12 md:h-12 text-indigo-600 dark:text-indigo-400" />
                     {activeCampaign.title}
                 </h1>
-                <p className="text-gray-600 max-w-2xl mx-auto text-lg mb-6">
+                <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto text-lg mb-6">
                     Escolha seu horário de intercessão e assuma seu posto nesta batalha espiritual!
                 </p>
 
@@ -128,7 +128,7 @@ export function PrayerClock() {
                         style={{ width: `${progressPercent}%` }}
                     ></div>
                 </div>
-                <p className="text-sm text-gray-500 font-medium">
+                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                     {isPhase1Complete
                         ? "FASE EXTRA ATIVADA! Vagas de reserva liberadas!"
                         : `Meta Global: ${Math.round(progressPercent)}% concluída para liberar vagas extras.`}
@@ -155,19 +155,19 @@ export function PrayerClock() {
 
                     switch (status) {
                         case 'open':
-                            cardClass = 'bg-white border-green-200 hover:border-green-400 hover:shadow-lg hover:-translate-y-1 cursor-pointer';
+                            cardClass = 'bg-white dark:bg-slate-800 border-green-200 dark:border-green-900 hover:border-green-400 dark:hover:border-green-500 hover:shadow-lg hover:-translate-y-1 cursor-pointer';
                             label = 'Disponível';
                             break;
                         case 'full':
-                            cardClass = 'bg-red-50 border-red-200 opacity-90 cursor-not-allowed'; // Soft lock
+                            cardClass = 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900/50 opacity-90 cursor-not-allowed'; // Soft lock
                             label = 'Lotado (7/7)';
                             break;
                         case 'bonus':
-                            cardClass = 'bg-yellow-50 border-yellow-300 ring-2 ring-yellow-200 hover:shadow-xl hover:-translate-y-1 cursor-pointer';
+                            cardClass = 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700 ring-2 ring-yellow-200 dark:ring-yellow-900/50 hover:shadow-xl hover:-translate-y-1 cursor-pointer';
                             label = 'Vaga Extra!';
                             break;
                         case 'maxed':
-                            cardClass = 'bg-gray-100 border-gray-300 opacity-60 cursor-not-allowed';
+                            cardClass = 'bg-gray-100 dark:bg-slate-800/50 border-gray-300 dark:border-slate-700 opacity-60 cursor-not-allowed';
                             label = 'Esgotado';
                             break;
                     }
@@ -176,7 +176,7 @@ export function PrayerClock() {
                     const date = new Date(activeCampaign.startDate);
                     date.setHours(date.getHours() + slot);
                     const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    const dayString = date.toLocaleDateString([], { weekday: 'short', day: '2-digit' });
+                    const dayString = date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' });
 
                     return (
                         <div
@@ -184,14 +184,14 @@ export function PrayerClock() {
                             onClick={() => handleSlotClick(slot, count, isPhase1Complete)}
                             className={`relative p-3 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center h-28 md:h-32 group ${cardClass}`}
                         >
-                            <span className="text-xs font-bold uppercase text-gray-400 mb-1">{dayString}</span>
-                            <h3 className="text-xl md:text-2xl font-black text-gray-800 leading-none mb-1">
+                            <span className="text-xs font-bold uppercase text-gray-400 dark:text-gray-500 mb-1">{dayString}</span>
+                            <h3 className="text-xl md:text-2xl font-black text-gray-800 dark:text-gray-100 leading-none mb-1">
                                 {timeString}
                             </h3>
 
-                            <div className="mt-auto flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/5">
-                                <Users size={12} className="text-gray-600" />
-                                <span className="text-xs font-bold text-gray-700">{count} / {status === 'bonus' || status === 'maxed' ? '10' : '7'}</span>
+                            <div className="mt-auto flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/5 dark:bg-white/10">
+                                <Users size={12} className="text-gray-600 dark:text-gray-300" />
+                                <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{count} / {status === 'bonus' || status === 'maxed' ? '10' : '7'}</span>
                             </div>
 
                             {status === 'full' && (
@@ -209,17 +209,17 @@ export function PrayerClock() {
             {/* Modal Selection */}
             {isModalOpen && selectedSlot !== null && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]" onClick={() => setIsModalOpen(false)}>
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-start mb-4">
-                            <h3 className="text-xl font-bold text-gray-800">Confirmar Presença</h3>
-                            <button onClick={() => setIsModalOpen(false)} className="p-1 rounded-full hover:bg-gray-100">
-                                <X size={20} className="text-gray-500" />
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-white">Confirmar Presença</h3>
+                            <button onClick={() => setIsModalOpen(false)} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700">
+                                <X size={20} className="text-gray-500 dark:text-gray-400" />
                             </button>
                         </div>
 
-                        <div className="bg-indigo-50 p-4 rounded-xl mb-6 text-center">
-                            <p className="text-indigo-600 font-medium text-sm">Horário Selecionado</p>
-                            <p className="text-3xl font-black text-indigo-900 mt-1">
+                        <div className="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-xl mb-6 text-center">
+                            <p className="text-indigo-600 dark:text-indigo-400 font-medium text-sm">Horário Selecionado</p>
+                            <p className="text-3xl font-black text-indigo-900 dark:text-indigo-100 mt-1">
                                 {(() => {
                                     const d = new Date(activeCampaign.startDate);
                                     d.setHours(d.getHours() + selectedSlot);
@@ -236,17 +236,17 @@ export function PrayerClock() {
                         ) : (
                             <form onSubmit={handleSubmitSignup} className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Seu Número de WhatsApp</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seu Número de WhatsApp</label>
                                     <input
                                         type="tel"
                                         autoFocus
                                         value={phoneInput}
                                         onChange={e => setPhoneInput(e.target.value)}
                                         placeholder="(11) 99999-9999"
-                                        className="w-full text-lg p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900 dark:text-gray-900 bg-white"
+                                        className="w-full text-lg p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900 dark:text-white bg-white dark:bg-slate-700"
                                         required
                                     />
-                                    <p className="text-xs text-gray-400 mt-1">Digite o número cadastrado no sistema.</p>
+                                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Digite o número cadastrado no sistema.</p>
                                 </div>
 
                                 <button

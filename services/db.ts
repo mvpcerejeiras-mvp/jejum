@@ -1,7 +1,52 @@
 
 import { supabase } from './supabaseClient';
-import { Participant, AppSettings, Member, FastingHistory, PrayerCampaign, PrayerSignup } from '../types';
+import { Participant, AppSettings, Member, FastingHistory, PrayerCampaign, PrayerSignup, SystemConfig } from '../types';
 import { DEFAULT_INSTRUCTION, DEFAULT_THEME, DEFAULT_APP_TITLE, DEFAULT_LOGO, DEFAULT_DAYS } from '../constants';
+
+export const getSystemConfig = async (): Promise<{ eventMode: 'fasting' | 'prayer_clock' | 'combined' }> => {
+  const { data, error } = await supabase
+    .from('system_config')
+    .select('event_mode')
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) {
+    // Default to 'fasting' if table missing or empty
+    return { eventMode: 'fasting' };
+  }
+
+  return { eventMode: data.event_mode as any };
+};
+
+export const saveSystemConfig = async (mode: 'fasting' | 'prayer_clock' | 'combined'): Promise<{ success: boolean }> => {
+  // Upsert logic for single row config
+  const { data: current } = await supabase.from('system_config').select('id').limit(1).maybeSingle();
+
+  if (current) {
+    const { error } = await supabase.from('system_config').update({ event_mode: mode }).eq('id', current.id);
+    return { success: !error };
+  } else {
+    const { error } = await supabase.from('system_config').insert({ event_mode: mode });
+    return { success: !error };
+  }
+};
+
+export const checkMemberByPhone = async (phone: string): Promise<Member | null> => {
+  const { data, error } = await supabase
+    .from('members')
+    .select('*')
+    .eq('phone', phone)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    id: data.id,
+    name: data.name,
+    phone: data.phone,
+    createdAt: data.created_at
+  };
+};
 
 const SETTINGS_ID_FALLBACK = '00000000-0000-0000-0000-000000000000'; // Not used if we query by simple limit, but good to have constraint conceptualized
 

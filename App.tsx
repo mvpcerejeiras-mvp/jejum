@@ -6,10 +6,12 @@ import WeeklySchedule from './components/WeeklySchedule';
 import { PrayerClock } from './components/PrayerClock';
 import { getSettings } from './services/db';
 import { DEFAULT_THEME, DEFAULT_INSTRUCTION, DEFAULT_APP_TITLE, DEFAULT_LOGO, DEFAULT_DAYS } from './constants';
-import { Flame, Lock, Cross, BookOpen, Heart, Sun, Mountain, Star, Moon } from 'lucide-react';
+import { Flame, Lock, Cross, BookOpen, Heart, Sun, Mountain, Star, Moon, Sparkles } from 'lucide-react';
+import { ParticipationProvider } from './contexts/ParticipationContext';
+import { Wizard } from './components/UnifiedParticipation/Wizard';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'home' | 'form' | 'admin' | 'login' | 'schedule' | 'clock'>('home');
+  const [view, setView] = useState<'home' | 'form' | 'admin' | 'login' | 'schedule' | 'clock' | 'wizard'>('home');
   const [password, setPassword] = useState('');
   const [appSettings, setAppSettings] = useState({
     theme: DEFAULT_THEME,
@@ -84,6 +86,14 @@ const App: React.FC = () => {
     }
   };
 
+  if (view === 'wizard') {
+    return (
+      <ParticipationProvider>
+        <Wizard onExit={() => setView('home')} />
+      </ParticipationProvider>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-indigo-100 selection:text-indigo-900 dark:selection:bg-indigo-900 dark:selection:text-indigo-100 pb-10 transition-colors duration-300">
 
@@ -130,8 +140,26 @@ const App: React.FC = () => {
         {/* Content Card */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-800 overflow-hidden transition-colors duration-300">
 
+
           {view === 'home' && (
-            <div className="p-6 md:p-8">
+            <div className="p-6 md:p-8 space-y-6">
+              {/* Unified Wizard Entry Point */}
+              <div
+                onClick={() => setView('wizard')}
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 text-white cursor-pointer shadow-lg shadow-indigo-500/30 hover:scale-[1.02] transition-transform group relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
+                <div className="relative z-10 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold mb-1 group-hover:text-indigo-100 transition-colors">Participar Agora</h2>
+                    <p className="text-indigo-100 text-sm">Jejum e Relógio de Oração em um só lugar.</p>
+                  </div>
+                  <div className="bg-white/20 p-3 rounded-full group-hover:bg-white/30 transition-colors">
+                    <Sparkles size={24} />
+                  </div>
+                </div>
+              </div>
+
               <HomeDashboard
                 onJoin={() => setView('form')}
                 onViewSchedule={() => setView('schedule')}
@@ -139,6 +167,15 @@ const App: React.FC = () => {
                 fastDays={appSettings.fastDays}
               />
             </div>
+          )}
+
+          {view === 'wizard' && (
+            // Render Wizard outside the standard container? 
+            // Ideally Wizard takes full screen. But we are inside Layout.
+            // We should render Wizard at root or conditional render.
+            // Let's modify the render return to show Wizard Full Screen.
+            // See 'Conditional Full Screen' logic below.
+            <div className="p-12 text-center text-slate-500">Iniciando...</div>
           )}
 
           {view === 'form' && (

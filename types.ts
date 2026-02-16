@@ -84,3 +84,9 @@ export interface PrayerSignup {
     phone: string;
   };
 }
+
+export interface SystemConfig {
+  id?: string;
+  eventMode: 'fasting' | 'prayer_clock' | 'combined'; // Modes: only fasting, only clock, or both
+  activeCampaignId?: string; // Optional: Force a specific campaign if multiple active
+}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PrayerCampaignManager } from './PrayerCampaignManager';
-import { getParticipants, getSettings, saveSettings, uploadLogo, updateParticipant, deleteParticipant, getMembers, saveMember, updateMember, deleteMember, migrateParticipantsToMembers, deleteAllMembers, archiveCurrentFast, getMemberHistory } from '../services/db';
-import { Participant, AppSettings, FastTime, Member, FastingHistory } from '../types';
+import { getParticipants, getSettings, saveSettings, uploadLogo, updateParticipant, deleteParticipant, getMembers, saveMember, updateMember, deleteMember, migrateParticipantsToMembers, deleteAllMembers, archiveCurrentFast, getMemberHistory, getSystemConfig, saveSystemConfig } from '../services/db';
+import { Participant, AppSettings, FastTime, Member, FastingHistory, SystemConfig } from '../types';
 import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical, Pencil, Trash, X, RefreshCw, Archive, History } from 'lucide-react';
 import { TIME_OPTIONS, TYPE_DESCRIPTIONS, DEFAULT_DAYS } from '../constants';
 
@@ -24,6 +24,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
   const [activeTab, setActiveTab] = useState<'participants' | 'settings' | 'analytics' | 'members' | 'prayer-clock' | 'prayer-campaigns'>('participants');
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [systemConfig, setSystemConfig] = useState<SystemConfig | null>(null);
   const [settings, setSettings] = useState<AppSettings>({ theme: '', instruction: '', appTitle: '', logoId: '', fastDays: [] });
 
   // Filters
@@ -42,6 +43,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
       setMembers(mems);
       const sets = await getSettings();
       setSettings(sets);
+      const config = await getSystemConfig();
+      setSystemConfig(config as SystemConfig);
     };
     loadData();
   }, [onSettingsChange]); // Reload when settings change trigger happens (e.g. parent refresh, though here we trigger parent)
@@ -397,156 +400,192 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
   );
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl overflow-hidden min-h-[600px] flex flex-col transition-colors">
-      {/* Admin Header */}
-      <div className="bg-slate-800 dark:bg-black text-white p-4 flex justify-between items-center">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-          Painel Administrativo
-        </h2>
-        <button onClick={onLogout} className="text-slate-300 hover:text-white text-sm flex items-center gap-1">
-          <LogOut size={16} /> Sair
+    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden min-h-[600px] flex flex-col transition-all border border-slate-200 dark:border-slate-700">
+      {/* Admin Header - Premium Gradient */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 flex justify-between items-center relative overflow-hidden">
+        {/* Abstract background accent */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+
+        <div className="relative z-10">
+          <h2 className="text-xl font-bold flex items-center gap-3">
+            <div className="relative">
+              <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse"></div>
+              <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-green-400 animate-ping opacity-75"></div>
+            </div>
+            <span className="tracking-wide">Painel Administrativo</span>
+          </h2>
+          <p className="text-slate-400 text-xs mt-1 ml-5.5">Gerenciamento e Controle</p>
+        </div>
+
+        <button
+          onClick={onLogout}
+          className="relative z-10 group flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full text-sm backdrop-blur-sm border border-white/10"
+        >
+          <LogOut size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+          <span>Sair</span>
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-700 overflow-x-auto bg-slate-50 dark:bg-slate-900/50">
-        <button
-          onClick={() => setActiveTab('participants')}
-          className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 min-w-[140px] transition-colors ${activeTab === 'participants' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
-        >
-          <Users size={18} /> Participantes
-        </button>
-        <button
-          onClick={() => setActiveTab('members')}
-          className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 min-w-[140px] transition-colors ${activeTab === 'members' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
-        >
-          <BookOpen size={18} /> Membros
-        </button>
-        <button
-          onClick={() => setActiveTab('prayer-clock')}
-          className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 min-w-[140px] transition-colors ${activeTab === 'prayer-clock' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
-        >
-          <Clock size={18} /> Relógio
-        </button>
-        <button
-          onClick={() => setActiveTab('prayer-campaigns')}
-          className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 min-w-[140px] transition-colors ${activeTab === 'prayer-campaigns' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
-        >
-          <List size={18} /> Campanhas
-        </button>
-        <button
-          onClick={() => setActiveTab('analytics')}
-          className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 min-w-[140px] transition-colors ${activeTab === 'analytics' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
-        >
-          <BarChart3 size={18} /> Estatísticas
-        </button>
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 min-w-[140px] transition-colors ${activeTab === 'settings' ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
-        >
-          <Settings size={18} /> Configurações
-        </button>
+      {/* Tabs - Modern Navigation */}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 pt-4 sticky top-0 z-20">
+        <div className="flex overflow-x-auto gap-6 scrollbar-hide">
+          {[
+            { id: 'participants', icon: <Users size={18} />, label: 'Participantes' },
+            { id: 'members', icon: <BookOpen size={18} />, label: 'Membros' },
+            { id: 'prayer-clock', icon: <Clock size={18} />, label: 'Relógio' },
+            { id: 'prayer-campaigns', icon: <List size={18} />, label: 'Campanhas' },
+            { id: 'analytics', icon: <BarChart3 size={18} />, label: 'Estatísticas' },
+            { id: 'settings', icon: <Settings size={18} />, label: 'Visual' },
+            { id: 'config', icon: <Settings size={18} />, label: 'Configurações' },
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`pb-4 px-2 text-sm font-medium flex items-center gap-2 transition-all relative whitespace-nowrap
+                ${activeTab === tab.id
+                  ? 'text-indigo-600 dark:text-indigo-400'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+            >
+              <span className={`transition-all duration-300 ${activeTab === tab.id ? 'scale-110' : 'scale-100'}`}>
+                {tab.icon}
+              </span>
+              {tab.label}
+
+              {/* Active styling - Animated underline */}
+              {activeTab === tab.id && (
+                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full animate-fade-in"></span>
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="p-6 flex-1 overflow-auto bg-slate-50 dark:bg-slate-900">
 
         {/* --- PARTICIPANTS TAB --- */}
         {activeTab === 'participants' && (
-          <div className="space-y-4">
-            {/* Toolbar */}
-            <div className="flex flex-col md:flex-row gap-3 justify-between bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
-              <div className="flex flex-col md:flex-row gap-2 flex-1">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+          <div className="space-y-6 animate-fade-in">
+            {/* Toolbar - Modern Card */}
+            <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+              <div className="flex flex-col md:flex-row gap-3 flex-1">
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors h-4 w-4" />
                   <input
                     type="text"
                     placeholder="Buscar nome ou telefone..."
-                    className="pl-9 w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                     value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
-                <select
-                  className="p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                  value={filterDay}
-                  onChange={e => setFilterDay(e.target.value)}
-                >
-                  <option value="">Todos os Dias</option>
-                  {settings.fastDays.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
+
+                {/* Filter Dropdowns - Styled */}
+                <div className="grid grid-cols-2 gap-2 md:contents">
+                  <select
+                    value={filterDay}
+                    onChange={(e) => setFilterDay(e.target.value)}
+                    className="px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <option value="">Todos os Dias</option>
+                    {settings.fastDays.map((day, i) => (
+                      <option key={i} value={day}>{day}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer transition-all hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    <option value="">Todos os Tipos</option>
+                    {TYPE_DESCRIPTIONS.map(t => (
+                      <option key={t.id} value={t.id}>{t.title}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <button
-                onClick={handleArchiveFast}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-md text-sm font-medium hover:bg-slate-900 border border-slate-700"
-                title="Encerrar evento atual e arquivar histórico"
-              >
-                <Archive size={16} /> Encerrar Jejum Atual
-              </button>
-              <button
-                onClick={exportCSV}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
-              >
-                <Download size={16} /> Exportar CSV
-              </button>
+
+              {/* Action Buttons - Premium */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleArchiveFast}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 rounded-lg text-sm font-medium transition-all shadow-lg shadow-slate-500/20 hover:shadow-xl hover:-translate-y-0.5"
+                >
+                  <Archive size={16} /> <span className="hidden sm:inline">Encerrar Jejum</span>
+                </button>
+                <button
+                  onClick={exportCSV}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-0.5"
+                >
+                  <Download size={16} /> <span className="hidden sm:inline">Exportar CSV</span>
+                </button>
+              </div>
             </div>
 
-            {/* List */}
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            {/* Table - Glass/Clean Look */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-100 dark:bg-slate-900/50 text-slate-600 dark:text-slate-300 font-semibold uppercase text-xs">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                     <tr>
-                      <th className="px-4 py-3">Nome</th>
-                      <th className="px-4 py-3">Dia(s)</th>
-                      <th className="px-4 py-3">Tipo</th>
-                      <th className="px-4 py-3">Data</th>
-                      <th className="px-4 py-3 text-right">Ações</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nome</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Dia(s)</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Tipo</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Data</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                     {filteredParticipants.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center text-slate-400 dark:text-slate-500">
-                          Nenhum participante encontrado.
+                        <td colSpan={5} className="px-6 py-12 text-center text-slate-400 dark:text-slate-500">
+                          <div className="flex flex-col items-center justify-center gap-3">
+                            <Search size={32} className="opacity-20" />
+                            <p>Nenhum participante encontrado.</p>
+                          </div>
                         </td>
                       </tr>
                     ) : (
                       filteredParticipants.map(p => (
-                        <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                          <td className="px-4 py-3">
-                            <div className="font-medium text-slate-800 dark:text-slate-200">{p.name}</div>
-                            <div className="text-slate-500 dark:text-slate-400 text-xs">{p.phone}</div>
+                        <tr key={p.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{p.name}</div>
+                            <div className="text-slate-500 dark:text-slate-400 text-xs font-medium opacity-75">{p.phone}</div>
                           </td>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                            <div className="flex flex-wrap gap-1">
+                          <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
+                            <div className="flex flex-wrap gap-1.5">
                               {p.days.map((day, idx) => (
-                                <span key={idx} className="bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded text-xs whitespace-nowrap">
+                                <span key={idx} className="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm">
                                   {day.split(' – ')[0]}
                                 </span>
                               ))}
                             </div>
                           </td>
-                          <td className="px-4 py-3">
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold shadow-sm ${p.type.includes('Água') ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                              p.type.includes('Parcial') ? 'bg-orange-50 text-orange-700 border border-orange-100' :
+                                p.type.includes('Total') ? 'bg-red-50 text-red-700 border border-red-100' :
+                                  'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                              }`}>
                               {p.type.split('–')[0]}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">
+                          <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs font-medium">
                             {new Date(p.createdAt).toLocaleDateString('pt-BR')}
                           </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className="flex justify-end gap-2">
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => handleEditClick(p)}
-                                className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition"
+                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all"
                                 title="Editar"
                               >
                                 <Pencil size={16} />
                               </button>
                               <button
                                 onClick={() => handleDelete(p.id!)}
-                                className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition"
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all"
                                 title="Excluir"
                               >
                                 <Trash size={16} />
@@ -560,7 +599,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                 </table>
               </div>
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 text-right">
+
+            <div className="text-xs font-medium text-slate-400 dark:text-slate-500 text-right px-2">
               Total: {filteredParticipants.length} registros
             </div>
           </div>
@@ -846,14 +886,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
 
         {/* --- MEMBERS TAB --- */}
         {activeTab === 'members' && (
-          <div className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-3 justify-between bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+          <div className="space-y-6 animate-fade-in">
+            {/* Toolbar - Modern Card */}
+            <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+              <div className="relative flex-1 group">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors h-4 w-4" />
                 <input
                   type="text"
                   placeholder="Buscar membro..."
-                  className="pl-9 w-full p-2 text-sm border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                 />
@@ -861,51 +902,52 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
               <div className="flex gap-2">
                 <button
                   onClick={handleDeleteAllMembers}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-md text-sm font-medium hover:bg-red-200 dark:hover:bg-red-900/50"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
                   title="Excluir todos os membros"
                 >
                   <Trash2 size={16} /> <span className="hidden sm:inline">Excluir Todos</span>
                 </button>
                 <button
                   onClick={handleSyncMembers}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-md text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-all shadow-sm hover:shadow"
                   title="Importar participantes da lista de jejum para membros"
                 >
                   <RefreshCw size={16} /> <span className="hidden sm:inline">Sincronizar</span>
                 </button>
                 <button
                   onClick={() => openMemberModal()}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-0.5"
                 >
                   <Plus size={16} /> Novo Membro
                 </button>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-100 dark:bg-slate-900/50 text-slate-600 dark:text-slate-300 font-semibold uppercase text-xs">
+            {/* Table - Glass/Clean Look */}
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
                   <tr>
-                    <th className="px-4 py-3">Nome</th>
-                    <th className="px-4 py-3">WhatsApp</th>
-                    <th className="px-4 py-3">Data Cadastro</th>
-                    <th className="px-4 py-3 text-right">Ações</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nome</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">WhatsApp</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Data Cadastro</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                   {filteredMembers.length === 0 ? (
-                    <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-400">Nenhum membro encontrado.</td></tr>
+                    <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400">Nenhum membro encontrado.</td></tr>
                   ) : (
                     filteredMembers.map(m => (
-                      <tr key={m.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{m.name}</td>
-                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{m.phone}</td>
-                        <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{new Date(m.createdAt).toLocaleDateString('pt-BR')}</td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
-                            <button onClick={() => openHistoryModal(m)} className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded" title="Ver Histórico"><History size={16} /></button>
-                            <button onClick={() => openMemberModal(m)} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded" title="Editar"><Pencil size={16} /></button>
-                            <button onClick={() => handleDeleteMember(m.id)} className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded" title="Excluir"><Trash size={16} /></button>
+                      <tr key={m.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                        <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{m.name}</td>
+                        <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{m.phone}</td>
+                        <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">{new Date(m.createdAt).toLocaleDateString('pt-BR')}</td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => openHistoryModal(m)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all" title="Ver Histórico"><History size={16} /></button>
+                            <button onClick={() => openMemberModal(m)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all" title="Editar"><Pencil size={16} /></button>
+                            <button onClick={() => handleDeleteMember(m.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all" title="Excluir"><Trash size={16} /></button>
                           </div>
                         </td>
                       </tr>
@@ -1057,6 +1099,55 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                 Salvar Alterações
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+
+      {activeTab === 'config' && (
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6 max-w-4xl mx-auto mt-6">
+          <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <Settings className="text-indigo-500" />
+            Configuração do Evento
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button
+              onClick={async () => {
+                await saveSystemConfig('fasting');
+                // reload
+                const config = await getSystemConfig();
+                setSystemConfig(config as SystemConfig);
+              }}
+              className={`p-6 rounded-xl border-2 text-left transition-all ${systemConfig?.eventMode === 'fasting' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'}`}
+            >
+              <div className="font-bold text-lg mb-2 text-slate-800 dark:text-slate-100">Apenas Jejum</div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">O fluxo focará apenas na escolha dos dias de jejum.</p>
+            </button>
+
+            <button
+              onClick={async () => {
+                await saveSystemConfig('prayer_clock');
+                const config = await getSystemConfig();
+                setSystemConfig(config as SystemConfig);
+              }}
+              className={`p-6 rounded-xl border-2 text-left transition-all ${systemConfig?.eventMode === 'prayer_clock' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'}`}
+            >
+              <div className="font-bold text-lg mb-2 text-slate-800 dark:text-slate-100">Apenas Relógio</div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">O fluxo focará apenas na escolha de horários de oração.</p>
+            </button>
+
+            <button
+              onClick={async () => {
+                await saveSystemConfig('combined');
+                const config = await getSystemConfig();
+                setSystemConfig(config as SystemConfig);
+              }}
+              className={`p-6 rounded-xl border-2 text-left transition-all ${systemConfig?.eventMode === 'combined' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'}`}
+            >
+              <div className="font-bold text-lg mb-2 text-slate-800 dark:text-slate-100">Combo (Jejum + Relógio)</div>
+              <p className="text-sm text-slate-500 dark:text-slate-400">O membro escolhe primeiro o jejum e depois é convidado para o relógio.</p>
+            </button>
           </div>
         </div>
       )}
