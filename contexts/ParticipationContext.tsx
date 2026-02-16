@@ -9,7 +9,7 @@ interface ParticipationContextType {
     setUser: (user: Member | null) => void;
     config: SystemConfig | null;
     loading: boolean;
-    login: (phone: string) => Promise<{ success: boolean; message?: string; isNewUser?: boolean }>;
+    login: (phone: string) => Promise<{ success: boolean; message?: string; isNewUser?: boolean; member?: Member }>;
     register: (name: string, phone: string) => Promise<{ success: boolean; message?: string }>;
     direction: number; // For animation direction (1 = next, -1 = prev)
     setDirection: (dir: number) => void;
@@ -52,12 +52,12 @@ export function ParticipationProvider({ children }: { children: React.ReactNode 
         }
     };
 
-    const login = async (phone: string): Promise<{ success: boolean; message?: string; isNewUser?: boolean }> => {
+    const login = async (phone: string): Promise<{ success: boolean; message?: string; isNewUser?: boolean; member?: Member }> => {
         try {
             const member = await checkMemberByPhone(phone);
             if (member) {
                 setUser(member);
-                return { success: true };
+                return { success: true, member };
             } else {
                 return { success: true, isNewUser: true };
             }

@@ -6,6 +6,7 @@ export function StepAuth() {
     const { login, register, setStep } = useParticipation();
     const [phone, setPhone] = useState('');
     const [name, setName] = useState('');
+    const [welcomeName, setWelcomeName] = useState('');
     const [isRegistering, setIsRegistering] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -18,7 +19,7 @@ export function StepAuth() {
 
     const handlePhoneSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (phone.length < 14) { // (11) 99999-9999
+        if (phone.length < 14) {
             setError('Digite um número válido.');
             return;
         }
@@ -31,11 +32,18 @@ export function StepAuth() {
 
         if (res.success) {
             if (res.isNewUser) {
-                setIsRegistering(true); // Switch to registration mode
+                setIsRegistering(true);
             } else {
-                // User found, go to next step
-                const nextStep = (useParticipation() as any).config?.eventMode === 'prayer_clock' ? 2 : 1;
-                setStep(nextStep);
+                if (res.member) {
+                    setWelcomeName(res.member.name);
+                    setTimeout(() => {
+                        const nextStep = (useParticipation() as any).config?.eventMode === 'prayer_clock' ? 2 : 1;
+                        setStep(nextStep);
+                    }, 1500);
+                } else {
+                    const nextStep = (useParticipation() as any).config?.eventMode === 'prayer_clock' ? 2 : 1;
+                    setStep(nextStep);
+                }
             }
         } else {
             setError(res.message || 'Erro ao verificar.');
@@ -60,6 +68,21 @@ export function StepAuth() {
             setError(res.message || 'Erro ao cadastrar.');
         }
     };
+
+    if (welcomeName) {
+        return (
+            <div className="animate-fade-in-up flex flex-col items-center justify-center py-10 space-y-6">
+                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center border border-green-500/50 p-4 animate-bounce">
+                    <User size={40} className="text-green-400" />
+                </div>
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-white mb-2">Bem-vindo(a) de volta!</h2>
+                    <p className="text-xl text-indigo-300 font-semibold">{welcomeName}</p>
+                </div>
+                <Loader className="animate-spin text-slate-500" size={24} />
+            </div>
+        );
+    }
 
     if (isRegistering) {
         return (
