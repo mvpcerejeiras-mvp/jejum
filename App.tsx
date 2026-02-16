@@ -161,7 +161,7 @@ const App: React.FC = () => {
               </div>
 
               <HomeDashboard
-                onJoin={() => setView('form')}
+                onJoin={() => setView('wizard')}
                 onViewSchedule={() => setView('schedule')}
                 onViewClock={() => setView('clock')}
                 fastDays={appSettings.fastDays}
