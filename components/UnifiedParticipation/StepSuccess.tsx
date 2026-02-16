@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParticipation } from '../../contexts/ParticipationContext';
-import { addPrayerSignup, saveParticipant } from '../../services/db';
+import { addPrayerSignup, saveParticipant, getPrayerCampaigns } from '../../services/db';
 import { CheckCircle, Share2, Calendar, Clock, ArrowRight } from 'lucide-react';
 import { FastDay, FastType, FastTime } from '../../types';
 
@@ -8,10 +8,11 @@ export function StepSuccess() {
     const { user, fastingData, clockData, appSettings } = useParticipation() as any;
     const [saving, setSaving] = useState(true);
     const [error, setError] = useState('');
+    const [savedSlots, setSavedSlots] = useState<string[]>([]);
 
     useEffect(() => {
         const saveData = async () => {
-            if (!fastingData) return; // Should not happen
+            if (!fastingData) return; // Should not happen in normal flow
 
             // 1. Save Fasting Data
             const fastRes = await saveParticipant({
@@ -29,15 +30,35 @@ export function StepSuccess() {
             }
 
             // 2. Save Clock Data (if selected)
-            if (clockData) {
-                const clockRes = await addPrayerSignup(
-                    clockData.campaignId,
-                    user.id, // Assuming user.id is set from Context "login/register" which maps to Member ID
-                    clockData.slotNumber
+            if (clockData && clockData.slotNumbers && clockData.slotNumbers.length > 0) {
+                const slots = clockData.slotNumbers as number[];
+                const slotTimeStrings: string[] = [];
+
+                // We need campaign info to calculate times for display
+                // (Optimally this would be passed or we fetch it briefly)
+                const campaigns = await getPrayerCampaigns();
+                const campaign = campaigns.find((c: any) => c.id === clockData.campaignId);
+
+                if (campaign) {
+                    slots.sort((a, b) => a - b).forEach(slot => {
+                        const date = new Date(campaign.startDate);
+                        date.setHours(date.getHours() + slot);
+                        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        slotTimeStrings.push(timeStr);
+                    });
+                    setSavedSlots(slotTimeStrings);
+                }
+
+                // Process all slots in parallel
+                const promises = slots.map(slot =>
+                    addPrayerSignup(clockData.campaignId, user.id, slot)
                 );
-                if (!clockRes.success) {
-                    console.error('Error saving clock:', clockRes.message);
-                    // Non-fatal? Or show warning? Let's show warning but count success.
+
+                const results = await Promise.all(promises);
+                const failures = results.filter(r => !r.success);
+
+                if (failures.length > 0) {
+                    console.error('Errors saving some slots:', failures);
                 }
             }
 
@@ -58,11 +79,10 @@ export function StepSuccess() {
             text += `Horário: ${fastingData.time}\n\n`;
         }
 
-        if (clockData) {
-            // We'd need to compute time again or pass it. 
-            // Ideally ClockData should store display time too or we fetch it.
-            // For now, simpler:
-            text += `⏰ *Relógio de Oração:*\nConfirmado!\n\n`;
+        if (savedSlots.length > 0) {
+            text += `⏰ *Relógio de Oração:*\n`;
+            savedSlots.forEach(t => text += `• ${t}\n`);
+            text += `\n`;
         }
 
         text += `_"Por isso jejuamos e suplicamos essa bênção ao nosso Deus, e ele nos atendeu." (Esdras 8:23)_`;
@@ -120,12 +140,14 @@ export function StepSuccess() {
                         </div>
                     </div>
 
-                    {clockData && (
+                    {savedSlots.length > 0 && (
                         <div className="flex items-start gap-3">
                             <Clock className="text-indigo-400 shrink-0 mt-1" size={18} />
                             <div>
                                 <div className="font-bold text-white">Relógio de Oração</div>
-                                <div className="text-sm text-slate-300">Horário Confirmado</div>
+                                <div className="text-sm text-slate-300">
+                                    {savedSlots.join(', ')}
+                                </div>
                             </div>
                         </div>
                     )}

@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { useParticipation } from '../../contexts/ParticipationContext';
 import { FastType, FastTime } from '../../types';
-import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronDown } from 'lucide-react';
+import { TYPE_DESCRIPTIONS } from '../../constants';
 
-const FAST_TYPES = [
-    { id: FastType.STANDARD, label: 'Jejum Parcial Padrão', icon: '🍞' },
-    { id: FastType.DANIEL, label: 'Jejum de Daniel', icon: '🥗' },
-    { id: FastType.INTENSIFIED, label: 'Jejum Parcial Intensificado', icon: '🔥' },
-    { id: FastType.RENUNCIATION, label: 'Jejum com Renúncia', icon: '❌' },
-];
+// Use same Time options but we can keep the local constant if it matches, 
+// or import from constants if available. 
+// For now, let's keep the local FAST_TIMES but use TYPE_DESCRIPTIONS for the types.
 
 const FAST_TIMES = [
     { id: FastTime.TWELVE_AM_PM, label: '12h (00h - 12h)' },
@@ -18,11 +16,12 @@ const FAST_TIMES = [
 ];
 
 export function StepFasting() {
-    const { setStep, appSettings, setFastingData, user } = useParticipation() as any;
+    const { setStep, appSettings, setFastingData, user, config } = useParticipation() as any;
 
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
     const [selectedType, setSelectedType] = useState<FastType | ''>('');
     const [selectedTime, setSelectedTime] = useState<FastTime | ''>('');
+    const [expandedType, setExpandedType] = useState<string | null>(null);
 
     const activeDays = appSettings.fastDays || [];
 
@@ -42,7 +41,7 @@ export function StepFasting() {
         });
 
         // Skip to success if only fasting mode
-        const config = (useParticipation() as any).config;
+        // Config is now available from top level scope
         if (config?.eventMode === 'fasting') {
             setStep(3);
         } else {
@@ -83,23 +82,56 @@ export function StepFasting() {
                 </div>
             </div>
 
-            {/* Fast Type */}
+            {/* Fast Type - Restored Explanations */}
             <div className="space-y-3">
                 <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tipo de Jejum</h3>
-                <div className="space-y-2">
-                    {FAST_TYPES.map((type) => (
-                        <button
-                            key={type.id}
-                            onClick={() => setSelectedType(type.id)}
-                            className={`w-full p-4 rounded-xl border text-left transition-all flex items-center gap-3 ${selectedType === type.id ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300'}`}
-                        >
-                            <span className="text-2xl">{type.icon}</span>
-                            <div>
-                                <div className="font-bold text-sm">{type.label}</div>
+                <div className="space-y-3">
+                    {TYPE_DESCRIPTIONS.map((type) => {
+                        const isSelected = selectedType === type.id;
+                        const isExpanded = expandedType === type.id;
+
+                        return (
+                            <div key={type.id} className={`rounded-xl border transition-all overflow-hidden ${isSelected ? 'bg-indigo-600 border-indigo-500' : 'bg-slate-800/50 border-slate-700'}`}>
+                                <button
+                                    onClick={() => setSelectedType(type.id as FastType)}
+                                    className="w-full p-4 flex items-center gap-3 text-left"
+                                >
+                                    {/* Helper to show icon based on type since TYPE_DESCRIPTIONS might not have strict icons property or we want to stick to the ones we used before */}
+                                    <span className="text-2xl">
+                                        {type.id === FastType.STANDARD && '🍞'}
+                                        {type.id === FastType.DANIEL && '🥗'}
+                                        {type.id === FastType.INTENSIFIED && '🔥'}
+                                        {type.id === FastType.RENUNCIATION && '❌'}
+                                    </span>
+                                    <div className="flex-1">
+                                        <div className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-slate-200'}`}>{type.title}</div>
+                                    </div>
+                                    {isSelected && <Check className="text-white" size={16} />}
+                                </button>
+
+                                {/* Expanded Description / Details toggle */}
+                                <div className={`px-4 pb-2 ${isSelected ? 'text-indigo-100' : 'text-slate-400'}`}>
+                                    <button
+                                        onClick={() => setExpandedType(isExpanded ? null : type.id)}
+                                        className="text-xs flex items-center gap-1 hover:underline opacity-80 mb-2"
+                                    >
+                                        {isExpanded ? 'Ocultar detalhes' : 'Ver detalhes'} <ChevronDown size={12} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {isExpanded && (
+                                        <div className="space-y-2 text-xs opacity-90 pb-3 animate-fade-in">
+                                            {type.description.map((desc, idx) => (
+                                                <div key={idx} className="flex gap-2">
+                                                    <span>•</span>
+                                                    <span>{desc.text}: <span className="opacity-70">{desc.detail}</span></span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            {selectedType === type.id && <Check className="ml-auto" size={16} />}
-                        </button>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 

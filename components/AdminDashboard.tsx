@@ -435,8 +435,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
             { id: 'prayer-clock', icon: <Clock size={18} />, label: 'Relógio' },
             { id: 'prayer-campaigns', icon: <List size={18} />, label: 'Campanhas' },
             { id: 'analytics', icon: <BarChart3 size={18} />, label: 'Estatísticas' },
-            { id: 'settings', icon: <Settings size={18} />, label: 'Visual' },
-            { id: 'config', icon: <Settings size={18} />, label: 'Configurações' },
+            { id: 'settings', icon: <Settings size={18} />, label: 'Configurações' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -757,8 +756,64 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
 
         {/* --- SETTINGS TAB --- */}
         {activeTab === 'settings' && (
-          <div className="space-y-6 max-w-2xl mx-auto">
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+          <div className="space-y-6 max-w-2xl mx-auto pb-12">
+
+            {/* NOVO: Configuração do Modo do Evento */}
+            <div className="bg-indigo-600 dark:bg-indigo-700 p-6 rounded-xl shadow-lg border border-indigo-500 text-white animate-fade-in">
+              <div className="flex items-center gap-3 mb-4">
+                <Settings className="w-6 h-6 text-indigo-200" />
+                <h3 className="text-xl font-bold">Modo de Participação</h3>
+              </div>
+              <p className="text-indigo-100 text-sm mb-6">Selecione como os membros devem participar do evento atual.</p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button
+                  onClick={async () => {
+                    const res = await saveSystemConfig('fasting');
+                    if (res.success) {
+                      const config = await getSystemConfig();
+                      setSystemConfig(config as any);
+                      alert('Modo "Apenas Jejum" ativado!');
+                    }
+                  }}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'fasting' ? 'border-white bg-white/20 shadow-inner' : 'border-indigo-400 bg-white/5 hover:bg-white/10'}`}
+                >
+                  <div className="font-bold text-sm">Apenas Jejum</div>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    const res = await saveSystemConfig('prayer_clock');
+                    if (res.success) {
+                      const config = await getSystemConfig();
+                      setSystemConfig(config as any);
+                      alert('Modo "Apenas Relógio" ativado!');
+                    }
+                  }}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'prayer_clock' ? 'border-white bg-white/20 shadow-inner' : 'border-indigo-400 bg-white/5 hover:bg-white/10'}`}
+                >
+                  <div className="font-bold text-sm">Apenas Relógio</div>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    const res = await saveSystemConfig('combined');
+                    if (res.success) {
+                      const config = await getSystemConfig();
+                      setSystemConfig(config as any);
+                      alert('Modo "Combo" ativado!');
+                    }
+                  }}
+                  className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'combined' ? 'border-white bg-white shadow-md text-indigo-700 font-black' : 'border-indigo-300 bg-white/10 hover:bg-white/20'}`}
+                >
+                  <div className="text-xs uppercase opacity-80 mb-1">Recomendado</div>
+                  <div className="font-bold text-sm">Modo Combo</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Configurações Visuais Existentes */}
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
               <h3 className="font-semibold text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Dias de Jejum</h3>
               <div className="space-y-3">
                 {settings.fastDays.map((day, index) => (
@@ -958,6 +1013,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
             </div>
           </div>
         )}
+
+
       </div>
 
       {/* History Modal */}
@@ -1104,53 +1161,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
       )}
 
 
-      {activeTab === 'config' && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6 max-w-4xl mx-auto mt-6">
-          <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <Settings className="text-indigo-500" />
-            Configuração do Evento
-          </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <button
-              onClick={async () => {
-                await saveSystemConfig('fasting');
-                // reload
-                const config = await getSystemConfig();
-                setSystemConfig(config as SystemConfig);
-              }}
-              className={`p-6 rounded-xl border-2 text-left transition-all ${systemConfig?.eventMode === 'fasting' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'}`}
-            >
-              <div className="font-bold text-lg mb-2 text-slate-800 dark:text-slate-100">Apenas Jejum</div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">O fluxo focará apenas na escolha dos dias de jejum.</p>
-            </button>
-
-            <button
-              onClick={async () => {
-                await saveSystemConfig('prayer_clock');
-                const config = await getSystemConfig();
-                setSystemConfig(config as SystemConfig);
-              }}
-              className={`p-6 rounded-xl border-2 text-left transition-all ${systemConfig?.eventMode === 'prayer_clock' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'}`}
-            >
-              <div className="font-bold text-lg mb-2 text-slate-800 dark:text-slate-100">Apenas Relógio</div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">O fluxo focará apenas na escolha de horários de oração.</p>
-            </button>
-
-            <button
-              onClick={async () => {
-                await saveSystemConfig('combined');
-                const config = await getSystemConfig();
-                setSystemConfig(config as SystemConfig);
-              }}
-              className={`p-6 rounded-xl border-2 text-left transition-all ${systemConfig?.eventMode === 'combined' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-indigo-300'}`}
-            >
-              <div className="font-bold text-lg mb-2 text-slate-800 dark:text-slate-100">Combo (Jejum + Relógio)</div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">O membro escolhe primeiro o jejum e depois é convidado para o relógio.</p>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

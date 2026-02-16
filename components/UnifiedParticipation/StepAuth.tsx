@@ -3,7 +3,7 @@ import { useParticipation } from '../../contexts/ParticipationContext';
 import { Phone, User, ArrowRight, Loader } from 'lucide-react';
 
 export function StepAuth() {
-    const { login, register, setStep } = useParticipation();
+    const { login, register, setStep, config } = useParticipation();
     const [phone, setPhone] = useState('');
     const [name, setName] = useState('');
     const [welcomeName, setWelcomeName] = useState('');
@@ -37,11 +37,11 @@ export function StepAuth() {
                 if (res.member) {
                     setWelcomeName(res.member.name);
                     setTimeout(() => {
-                        const nextStep = (useParticipation() as any).config?.eventMode === 'prayer_clock' ? 2 : 1;
+                        const nextStep = config?.eventMode === 'prayer_clock' ? 2 : 1;
                         setStep(nextStep);
                     }, 1500);
                 } else {
-                    const nextStep = (useParticipation() as any).config?.eventMode === 'prayer_clock' ? 2 : 1;
+                    const nextStep = config?.eventMode === 'prayer_clock' ? 2 : 1;
                     setStep(nextStep);
                 }
             }

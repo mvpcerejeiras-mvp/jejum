@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParticipation } from '../../contexts/ParticipationContext';
 import { getPrayerCampaigns, getPrayerSignups } from '../../services/db';
-import { ArrowLeft, ArrowRight, Clock, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clock, Users, Flame, Heart } from 'lucide-react';
 
 export function StepClock() {
     const { setStep, setClockData, user, config } = useParticipation() as any;
     const [activeCampaign, setActiveCampaign] = useState<any>(null);
     const [signups, setSignups] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+    const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
+    const [mode, setMode] = useState<'intro' | 'selection'>('intro');
 
     useEffect(() => {
         loadCampaign();
@@ -29,18 +30,20 @@ export function StepClock() {
     };
 
     const handleSlotClick = (slot: number) => {
-        if (selectedSlot === slot) {
-            setSelectedSlot(null);
-        } else {
-            setSelectedSlot(slot);
-        }
+        setSelectedSlots(prev => {
+            if (prev.includes(slot)) {
+                return prev.filter(s => s !== slot);
+            } else {
+                return [...prev, slot];
+            }
+        });
     };
 
     const handleNext = () => {
-        if (selectedSlot === null) return;
+        if (selectedSlots.length === 0) return;
         setClockData({
             campaignId: activeCampaign.id,
-            slotNumber: selectedSlot
+            slotNumbers: selectedSlots // Now sending array
         });
         setStep(3); // Success
     };
@@ -48,6 +51,10 @@ export function StepClock() {
     const handleSkip = () => {
         setClockData(null); // Explicitly skipped
         setStep(3); // Success
+    };
+
+    const handleIntroAccept = () => {
+        setMode('selection');
     };
 
     if (loading) return <div className="text-white text-center py-10">Carregando horários...</div>;
@@ -76,6 +83,47 @@ export function StepClock() {
     // Assuming 24h or duration from campaign
     const slots = Array.from({ length: activeCampaign.duration }, (_, i) => i);
 
+    // --- MODE: INTRO (Upsell) ---
+    if (mode === 'intro') {
+        return (
+            <div className="animate-fade-in-up space-y-8 py-10 text-center">
+                <div className="relative inline-block">
+                    <div className="absolute inset-0 bg-indigo-500 blur-2xl opacity-30 animate-pulse"></div>
+                    <div className="relative w-24 h-24 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-full flex items-center justify-center mx-auto shadow-2xl border-4 border-white/10">
+                        <Flame size={48} className="text-white animate-bounce" />
+                    </div>
+                </div>
+
+                <div className="space-y-4 max-w-sm mx-auto">
+                    <h2 className="text-3xl font-bold text-white leading-tight">
+                        Vamos potencializar com oração?
+                    </h2>
+                    <p className="text-slate-300 text-lg leading-relaxed">
+                        Que tal separar <strong className="text-indigo-400">1 hora</strong> para interceder junto com a igreja?
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 max-w-xs mx-auto pt-4">
+                    <button
+                        onClick={handleIntroAccept}
+                        className="w-full py-4 px-6 bg-white text-indigo-900 font-extrabold rounded-2xl shadow-xl shadow-indigo-900/50 hover:bg-indigo-50 hover:scale-105 transition-all text-lg flex items-center justify-center gap-2 group"
+                    >
+                        <Heart className="group-hover:text-red-500 transition-colors" fill="currentColor" size={20} />
+                        Sim, eu quero!
+                    </button>
+
+                    <button
+                        onClick={handleSkip}
+                        className="w-full py-3 px-6 text-slate-400 font-medium hover:text-white transition-colors"
+                    >
+                        Agora não, apenas o jejum
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // --- MODE: SELECTION ---
     return (
         <div className="animate-fade-in-up space-y-6 pb-24">
             <div className="text-center">
@@ -83,14 +131,14 @@ export function StepClock() {
                     <Clock className="text-indigo-400" size={32} />
                 </div>
                 <h2 className="text-2xl font-bold text-white">Relógio de Oração</h2>
-                <p className="text-slate-300">Escolha um horário para interceder.</p>
+                <p className="text-slate-300">Escolha seus horários de intercessão.</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
                 {slots.map(slot => {
                     const time = getSlotTime(slot);
                     const count = getSlotCount(slot);
-                    const isSelected = selectedSlot === slot;
+                    const isSelected = selectedSlots.includes(slot);
                     const isFull = count >= 10; // Hard limit for demo
 
                     return (
@@ -110,19 +158,23 @@ export function StepClock() {
                             <div className="flex items-center gap-1 text-xs opacity-70">
                                 <Users size={10} /> {count}
                             </div>
+                            {isSelected && (
+                                <div className="absolute top-1 right-1 w-2 h-2 bg-white rounded-full"></div>
+                            )}
                         </button>
                     );
                 })}
             </div>
 
+            <p className="text-center text-xs text-slate-500">
+                {selectedSlots.length > 0 ? `${selectedSlots.length} horário(s) selecionado(s)` : 'Selecione pelo menos um horário'}
+            </p>
+
             {/* Footer Action */}
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-gray-900 via-gray-900/90 to-transparent z-50 backdrop-blur-sm">
                 <div className="max-w-lg mx-auto flex gap-3">
                     <button
-                        onClick={() => {
-                            const config = (useParticipation() as any).config;
-                            setStep(config?.eventMode === 'prayer_clock' ? 0 : 1);
-                        }}
+                        onClick={() => setMode('intro')}
                         className="px-4 py-4 bg-slate-800 text-slate-300 font-bold rounded-xl hover:bg-slate-700 transition-colors"
                     >
                         <ArrowLeft size={20} />
@@ -135,7 +187,7 @@ export function StepClock() {
                     </button>
                     <button
                         onClick={handleNext}
-                        disabled={selectedSlot === null}
+                        disabled={selectedSlots.length === 0}
                         className="flex-1 bg-white text-indigo-900 font-bold py-4 rounded-xl shadow-lg hover:bg-slate-100 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         Confirmar <ArrowRight size={20} />

@@ -7,11 +7,11 @@ export const getSystemConfig = async (): Promise<{ eventMode: 'fasting' | 'praye
   const { data, error } = await supabase
     .from('system_config')
     .select('event_mode')
+    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (error || !data) {
-    // Default to 'fasting' if table missing or empty
     return { eventMode: 'fasting' };
   }
 
@@ -19,8 +19,8 @@ export const getSystemConfig = async (): Promise<{ eventMode: 'fasting' | 'praye
 };
 
 export const saveSystemConfig = async (mode: 'fasting' | 'prayer_clock' | 'combined'): Promise<{ success: boolean }> => {
-  // Upsert logic for single row config
-  const { data: current } = await supabase.from('system_config').select('id').limit(1).maybeSingle();
+  // Always use the latest config row if multiple exist for some reason
+  const { data: current } = await supabase.from('system_config').select('id').order('created_at', { ascending: false }).limit(1).maybeSingle();
 
   if (current) {
     const { error } = await supabase.from('system_config').update({ event_mode: mode }).eq('id', current.id);
