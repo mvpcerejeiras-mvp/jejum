@@ -71,10 +71,10 @@ const App: React.FC = () => {
 
   const getLogoComponent = (id: string) => {
     if (id?.startsWith('http')) {
-      return <img src={id} alt="Logo" className="w-16 h-16 object-contain" />;
+      return <img src={id} alt="Logo" className="w-full h-full object-cover" />;
     }
 
-    const props = { className: "w-10 h-10 text-orange-300" };
+    const props = { className: "w-12 h-12 text-orange-300" };
     switch (id) {
       case 'cross': return <Cross {...props} />;
       case 'book': return <BookOpen {...props} />;
@@ -113,13 +113,13 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 -mt-48 relative z-10">
+      <div className={`mx-auto px-4 -mt-48 relative z-10 transition-all duration-500 ease-in-out ${view === 'admin' ? 'max-w-7xl' : 'max-w-3xl'}`}>
 
         {/* Main Header Content */}
         <div className="text-center mb-8">
           <div
             onClick={() => setView('home')}
-            className="inline-flex items-center justify-center p-4 bg-white/10 backdrop-blur-sm rounded-full mb-4 ring-1 ring-white/20 shadow-lg animate-fade-in-up cursor-pointer hover:bg-white/20 transition-colors"
+            className="flex items-center justify-center w-32 h-32 mx-auto p-0 bg-white/10 backdrop-blur-sm rounded-full mb-4 ring-1 ring-white/20 shadow-lg animate-fade-in-up cursor-pointer hover:bg-white/20 transition-all overflow-hidden"
           >
             {getLogoComponent(appSettings.logoId || 'flame')}
           </div>

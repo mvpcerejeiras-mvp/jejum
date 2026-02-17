@@ -545,6 +545,25 @@ export const deleteCampaign = async (id: string): Promise<{ success: boolean }> 
   return { success: !error };
 }
 
+export const updatePrayerCampaign = async (id: string, campaign: Partial<PrayerCampaign>): Promise<{ success: boolean; message?: string }> => {
+  const { error } = await supabase
+    .from('prayer_campaigns')
+    .update({
+      title: campaign.title,
+      description: campaign.description,
+      start_date: campaign.startDate,
+      duration: campaign.duration,
+      is_active: campaign.isActive
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error updating prayer campaign:', error);
+    return { success: false, message: 'Erro ao atualizar campanha.' };
+  }
+  return { success: true };
+};
+
 export const getPrayerSignups = async (campaignId: string): Promise<PrayerSignup[]> => {
   const { data, error } = await supabase
     .from('prayer_signups')

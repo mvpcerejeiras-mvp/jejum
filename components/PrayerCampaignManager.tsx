@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Play, Pause, Clock, Users, Calendar } from 'lucide-react';
-import { createPrayerCampaign, getPrayerCampaigns, toggleCampaignStatus, deleteCampaign, getPrayerSignups } from '../services/db';
+import { Plus, Trash2, Play, Pause, Clock, Users, Calendar, Edit2 } from 'lucide-react';
+import { createPrayerCampaign, getPrayerCampaigns, toggleCampaignStatus, deleteCampaign, getPrayerSignups, updatePrayerCampaign } from '../services/db';
 import { PrayerCampaign, PrayerSignup } from '../types';
 
 export function PrayerCampaignManager() {
     const [campaigns, setCampaigns] = useState<PrayerCampaign[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showNewModal, setShowNewModal] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [editingCampaign, setEditingCampaign] = useState<PrayerCampaign | null>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    // New Campaign Form
-    const [newTitle, setNewTitle] = useState('');
-    const [newStartDate, setNewStartDate] = useState('');
-    const [newStartTime, setNewStartTime] = useState('00:00');
-    const [newDuration, setNewDuration] = useState<12 | 48>(12);
+    // Form states
+    const [title, setTitle] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [startTime, setStartTime] = useState('00:00');
+    const [duration, setDuration] = useState<12 | 48>(12);
     const [error, setError] = useState('');
 
     // Selected Campaign Details
@@ -44,30 +45,68 @@ export function PrayerCampaignManager() {
         setSelectedSignups(data);
     };
 
-    const handleCreate = async (e: React.FormEvent) => {
+    const resetForm = () => {
+        setTitle('');
+        setStartDate('');
+        setStartTime('00:00');
+        setDuration(12);
+        setError('');
+        setEditingCampaign(null);
+    };
+
+    const openCreateModal = () => {
+        resetForm();
+        setShowModal(true);
+    };
+
+    const openEditModal = (campaign: PrayerCampaign) => {
+        const dateObj = new Date(campaign.startDate);
+        setEditingCampaign(campaign);
+        setTitle(campaign.title);
+        setStartDate(dateObj.toISOString().split('T')[0]);
+        setStartTime(dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+        setDuration(campaign.duration);
+        setError('');
+        setShowModal(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newTitle || !newStartDate || !newStartTime) {
+        if (!title || !startDate || !startTime) {
             setError('Preencha todos os campos obrigatórios.');
             return;
         }
 
-        const startDateTime = new Date(`${newStartDate}T${newStartTime}:00`).toISOString();
+        const startDateTime = new Date(`${startDate}T${startTime}:00`).toISOString();
 
-        const { success, message } = await createPrayerCampaign({
-            title: newTitle,
-            startDate: startDateTime,
-            duration: newDuration
-        });
+        if (editingCampaign) {
+            const { success, message } = await updatePrayerCampaign(editingCampaign.id, {
+                title,
+                startDate: startDateTime,
+                duration
+            });
 
-        if (success) {
-            setShowNewModal(false);
-            setNewTitle('');
-            setNewStartDate('');
-            setNewStartTime('00:00');
-            setError('');
-            setRefreshTrigger(prev => prev + 1);
+            if (success) {
+                setShowModal(false);
+                resetForm();
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                setError(message || 'Erro ao atualizar campanha.');
+            }
         } else {
-            setError(message || 'Erro ao criar campanha.');
+            const { success, message } = await createPrayerCampaign({
+                title,
+                startDate: startDateTime,
+                duration
+            });
+
+            if (success) {
+                setShowModal(false);
+                resetForm();
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                setError(message || 'Erro ao criar campanha.');
+            }
         }
     };
 
@@ -88,9 +127,6 @@ export function PrayerCampaignManager() {
     const renderGridPreview = (campaign: PrayerCampaign) => {
         const signups = selectedSignups;
         const slots = Array.from({ length: campaign.duration }, (_, i) => i);
-
-        // Calculate total fill
-        const totalSlots = campaign.duration;
 
         // Check Phase 1 (all >= 7)
         const slotCounts = slots.map(s => signups.filter(su => su.slotNumber === s).length);
@@ -162,7 +198,7 @@ export function PrayerCampaignManager() {
                     Relógio de Oração
                 </h2>
                 <button
-                    onClick={() => setShowNewModal(true)}
+                    onClick={openCreateModal}
                     className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700 transition-colors"
                 >
                     <Plus size={20} />
@@ -198,6 +234,13 @@ export function PrayerCampaignManager() {
 
                                 <div className="flex items-center gap-2">
                                     <button
+                                        onClick={() => openEditModal(campaign)}
+                                        className="p-2 rounded hover:bg-gray-100 dark:hover:bg-slate-700 text-indigo-600 dark:text-indigo-400 transition-colors"
+                                        title="Editar"
+                                    >
+                                        <Edit2 size={18} />
+                                    </button>
+                                    <button
                                         onClick={() => handleToggleStatus(campaign.id, campaign.isActive)}
                                         className={`p-2 rounded hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors ${campaign.isActive ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}
                                         title={campaign.isActive ? "Pausar/Encerrar" : "Reativar"}
@@ -226,11 +269,13 @@ export function PrayerCampaignManager() {
                 </div>
             )}
 
-            {/* Modal Nova Campanha */}
-            {showNewModal && (
+            {/* Modal Campanha (Nova ou Editar) */}
+            {showModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
                     <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-md shadow-xl animate-fade-in-up">
-                        <h3 className="text-lg font-bold mb-4 text-slate-800 dark:text-slate-100">Criar Novo Relógio de Oração</h3>
+                        <h3 className="text-lg font-bold mb-4 text-slate-800 dark:text-slate-100">
+                            {editingCampaign ? 'Editar Relógio de Oração' : 'Criar Novo Relógio de Oração'}
+                        </h3>
 
                         {error && (
                             <div className="bg-red-50 text-red-700 p-3 rounded mb-4 text-sm">
@@ -238,13 +283,13 @@ export function PrayerCampaignManager() {
                             </div>
                         )}
 
-                        <form onSubmit={handleCreate} className="space-y-4">
+                        <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Título</label>
                                 <input
                                     type="text"
-                                    value={newTitle}
-                                    onChange={e => setNewTitle(e.target.value)}
+                                    value={title}
+                                    onChange={e => setTitle(e.target.value)}
                                     className="w-full border rounded p-2 text-slate-800 dark:text-white bg-white dark:bg-slate-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500"
                                     placeholder="Ex: Relógio de Poder - Março"
                                     required
@@ -256,8 +301,8 @@ export function PrayerCampaignManager() {
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Data de Início</label>
                                     <input
                                         type="date"
-                                        value={newStartDate}
-                                        onChange={e => setNewStartDate(e.target.value)}
+                                        value={startDate}
+                                        onChange={e => setStartDate(e.target.value)}
                                         className="w-full border rounded p-2 text-slate-800 dark:text-white bg-white dark:bg-slate-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500"
                                         required
                                     />
@@ -266,8 +311,8 @@ export function PrayerCampaignManager() {
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Hora de Início</label>
                                     <input
                                         type="time"
-                                        value={newStartTime}
-                                        onChange={e => setNewStartTime(e.target.value)}
+                                        value={startTime}
+                                        onChange={e => setStartTime(e.target.value)}
                                         className="w-full border rounded p-2 text-slate-800 dark:text-white bg-white dark:bg-slate-700 border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-indigo-500"
                                         required
                                     />
@@ -279,15 +324,15 @@ export function PrayerCampaignManager() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <button
                                         type="button"
-                                        onClick={() => setNewDuration(12)}
-                                        className={`p-3 rounded border text-center transition-colors ${newDuration === 12 ? 'bg-indigo-50 dark:bg-indigo-900/40 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-gray-600 text-slate-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600'}`}
+                                        onClick={() => setDuration(12)}
+                                        className={`p-3 rounded border text-center transition-colors ${duration === 12 ? 'bg-indigo-50 dark:bg-indigo-900/40 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-gray-600 text-slate-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600'}`}
                                     >
                                         12 Horas
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setNewDuration(48)}
-                                        className={`p-3 rounded border text-center transition-colors ${newDuration === 48 ? 'bg-indigo-50 dark:bg-indigo-900/40 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-gray-600 text-slate-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600'}`}
+                                        onClick={() => setDuration(48)}
+                                        className={`p-3 rounded border text-center transition-colors ${duration === 48 ? 'bg-indigo-50 dark:bg-indigo-900/40 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-bold' : 'bg-white dark:bg-slate-700 border-gray-300 dark:border-gray-600 text-slate-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-600'}`}
                                     >
                                         48 Horas
                                     </button>
@@ -297,7 +342,7 @@ export function PrayerCampaignManager() {
                             <div className="flex justify-end gap-2 mt-6">
                                 <button
                                     type="button"
-                                    onClick={() => setShowNewModal(false)}
+                                    onClick={() => setShowModal(false)}
                                     className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
                                 >
                                     Cancelar
@@ -306,7 +351,7 @@ export function PrayerCampaignManager() {
                                     type="submit"
                                     className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
                                 >
-                                    Criar Relógio
+                                    {editingCampaign ? 'Salvar Alterações' : 'Criar Relógio'}
                                 </button>
                             </div>
                         </form>
