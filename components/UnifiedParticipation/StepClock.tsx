@@ -4,12 +4,15 @@ import { getPrayerCampaigns, getPrayerSignups } from '../../services/db';
 import { ArrowLeft, ArrowRight, Clock, Users, Flame, Heart } from 'lucide-react';
 
 export function StepClock() {
-    const { setStep, setClockData, user, config } = useParticipation() as any;
+    const { setStep, setClockData, user, config, participationData } = useParticipation() as any;
     const [activeCampaign, setActiveCampaign] = useState<any>(null);
     const [signups, setSignups] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
-    const [mode, setMode] = useState<'intro' | 'selection'>('intro');
+
+    // Pre-fill slots if user already has prayer signups
+    const initialSlots = participationData?.prayer?.map((s: any) => s.slot_number) || [];
+    const [selectedSlots, setSelectedSlots] = useState<number[]>(initialSlots);
+    const [mode, setMode] = useState<'intro' | 'selection'>(initialSlots.length > 0 ? 'selection' : 'intro');
 
     useEffect(() => {
         loadCampaign();
@@ -96,10 +99,10 @@ export function StepClock() {
 
                 <div className="space-y-4 max-w-sm mx-auto">
                     <h2 className="text-3xl font-bold text-white leading-tight">
-                        Vamos potencializar com oração?
+                        Você pode assumir um turno de oração?
                     </h2>
                     <p className="text-slate-300 text-lg leading-relaxed">
-                        Que tal separar <strong className="text-indigo-400">1 hora</strong> para interceder junto com a igreja?
+                        Serão <strong className="text-indigo-400">12 horas</strong> de intercessão. Escolha 1 hora para clamar e fortalecer a igreja em oração.
                     </p>
                 </div>
 
@@ -108,15 +111,14 @@ export function StepClock() {
                         onClick={handleIntroAccept}
                         className="w-full py-4 px-6 bg-white text-indigo-900 font-extrabold rounded-2xl shadow-xl shadow-indigo-900/50 hover:bg-indigo-50 hover:scale-105 transition-all text-lg flex items-center justify-center gap-2 group"
                     >
-                        <Heart className="group-hover:text-red-500 transition-colors" fill="currentColor" size={20} />
-                        Sim, eu quero!
+                        🙌 Quero meu turno
                     </button>
 
                     <button
                         onClick={handleSkip}
                         className="w-full py-3 px-6 text-slate-400 font-medium hover:text-white transition-colors"
                     >
-                        Agora não, apenas o jejum
+                        Ficarei somente no jejum
                     </button>
                 </div>
             </div>

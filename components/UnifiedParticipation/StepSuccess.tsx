@@ -1,23 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { useParticipation } from '../../contexts/ParticipationContext';
-import { addPrayerSignup, saveParticipant, getPrayerCampaigns } from '../../services/db';
+import { addPrayerSignup, saveParticipant, getPrayerCampaigns, clearPrayerSignups } from '../../services/db';
+import { sendWhatsAppMessage } from '../../services/whatsapp';
 import { CheckCircle, Share2, Calendar, Clock, ArrowRight } from 'lucide-react';
 import { FastDay, FastType, FastTime } from '../../types';
+import { TYPE_DESCRIPTIONS } from '../../constants';
 
-export function StepSuccess() {
-    const { user, fastingData, clockData, appSettings } = useParticipation() as any;
+export function StepSuccess({ onFinish }: { onFinish: () => void }) {
+    const { user, fastingData, clockData, appSettings, justSaved, setJustSaved } = useParticipation() as any;
     const [saving, setSaving] = useState(true);
     const [error, setError] = useState('');
     const [savedSlots, setSavedSlots] = useState<string[]>([]);
+    const hasSavedRef = React.useRef(false);
 
     useEffect(() => {
         const saveData = async () => {
+            if (hasSavedRef.current) return;
+            hasSavedRef.current = true;
+
             if (!fastingData) return; // Should not happen in normal flow
 
             // 1. Save Fasting Data
             const fastRes = await saveParticipant({
                 name: user.name,
                 phone: user.phone,
+                member_id: user.id,
                 days: fastingData.days,
                 type: fastingData.type,
                 time: fastingData.time
@@ -30,12 +37,12 @@ export function StepSuccess() {
             }
 
             // 2. Save Clock Data (if selected)
+            let slotsSavedCount = 0;
+            let currentSlotTimes: string[] = [];
             if (clockData && clockData.slotNumbers && clockData.slotNumbers.length > 0) {
                 const slots = clockData.slotNumbers as number[];
                 const slotTimeStrings: string[] = [];
 
-                // We need campaign info to calculate times for display
-                // (Optimally this would be passed or we fetch it briefly)
                 const campaigns = await getPrayerCampaigns();
                 const campaign = campaigns.find((c: any) => c.id === clockData.campaignId);
 
@@ -47,18 +54,24 @@ export function StepSuccess() {
                         slotTimeStrings.push(timeStr);
                     });
                     setSavedSlots(slotTimeStrings);
+                    currentSlotTimes = slotTimeStrings;
+                    slotsSavedCount = slots.length;
                 }
 
-                // Process all slots in parallel
-                const promises = slots.map(slot =>
-                    addPrayerSignup(clockData.campaignId, user.id, slot)
-                );
+                await clearPrayerSignups(clockData.campaignId, user.id);
+                const promises = slots.map(slot => addPrayerSignup(clockData.campaignId, user.id, slot));
+                await Promise.all(promises);
+            }
 
-                const results = await Promise.all(promises);
-                const failures = results.filter(r => !r.success);
-
-                if (failures.length > 0) {
-                    console.error('Errors saving some slots:', failures);
+            // 3. Automate WhatsApp Message (Z-API) - ONLY if it's a fresh save
+            if (justSaved) {
+                try {
+                    const rawMessage = decodeURIComponent(getWhatsAppMessage(slotsSavedCount > 0, currentSlotTimes));
+                    await sendWhatsAppMessage(user.phone, rawMessage);
+                    // Mark as processed so reload doesn't resend
+                    setJustSaved(false);
+                } catch (waError) {
+                    console.error("Failed to send auto WhatsApp:", waError);
                 }
             }
 
@@ -68,24 +81,53 @@ export function StepSuccess() {
         saveData();
     }, []);
 
-    const getWhatsAppMessage = () => {
-        let text = `*Compromisso de Jejum & Oração* 🙏\n\n`;
-        text += `Eu, *${user?.name}*, assumo meu compromisso:\n\n`;
+    const getWhatsAppMessage = (hasPrayer: boolean, overrideSlots?: string[]) => {
+        const firstName = user?.name ? user.name.split(' ')[0] : 'Irmão(ã)';
+        const hasFasting = fastingData && fastingData.days && fastingData.days.length > 0;
 
-        if (fastingData?.days) {
-            text += `🗓 *Jejum:*\n`;
-            fastingData.days.forEach((d: string) => text += `• ${d}\n`);
-            text += `Tipo: ${fastingData.type}\n`;
-            text += `Horário: ${fastingData.time}\n\n`;
+        // Use provided slots or fallback to state (for manual button)
+        const displaySlots = overrideSlots || savedSlots;
+
+        let propulsion = "";
+        if (hasFasting && hasPrayer) propulsion = "Jejum e Oração";
+        else if (hasFasting) propulsion = "Jejum";
+        else propulsion = "Oração";
+
+        // Clean up the time string
+        const cleanTime = fastingData?.time?.includes('– das ')
+            ? fastingData.time.split('– das ')[1]
+            : fastingData?.time;
+
+        // Find fasting description details
+        const typeInfo = TYPE_DESCRIPTIONS.find(t => t.id === fastingData?.type);
+        let detailText = "";
+        if (typeInfo && typeInfo.description) {
+            detailText = typeInfo.description.map(d => `• ${d.text}: ${d.detail}`).join('\n');
         }
 
-        if (savedSlots.length > 0) {
-            text += `⏰ *Relógio de Oração:*\n`;
-            savedSlots.forEach(t => text += `• ${t}\n`);
+        let text = `*Graça e paz ${firstName}!*\n\n`;
+        text += `✅ Seu Proposito de ${propulsion} foi Confirmado!\n\n`;
+        text += `Que Deus abençoe sua consagração 🙏🔥\n\n`;
+
+        if (hasFasting) {
+            const dayNames = fastingData.days.map((d: string) => d.split('–')[0].trim()).join(', ');
+            text += `🗓 *Jejum –* ${dayNames}\n`;
+            text += `⏰ ${cleanTime} - "${typeInfo?.title || fastingData.type}"\n\n`;
+
+            if (detailText) {
+                text += `*Detalhes do Jejum:*\n${detailText}\n\n`;
+            }
+        }
+
+        if (hasPrayer && displaySlots.length > 0) {
+            text += `🕗 *Relógio de Oração*\n`;
+            displaySlots.forEach(t => {
+                text += `${t} – Intercessão na igreja\n`;
+            });
             text += `\n`;
         }
 
-        text += `_"Por isso jejuamos e suplicamos essa bênção ao nosso Deus, e ele nos atendeu." (Esdras 8:23)_`;
+        text += `Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
         return encodeURIComponent(text);
     };
 
@@ -146,7 +188,11 @@ export function StepSuccess() {
                             <div>
                                 <div className="font-bold text-white">Relógio de Oração</div>
                                 <div className="text-sm text-slate-300">
-                                    {savedSlots.join(', ')}
+                                    {savedSlots.map((t, idx) => (
+                                        <div key={idx}>
+                                            • {t} {t === '08:00' && <span className="text-xs text-indigo-400 font-medium">(seu horário de intercessão na Igreja)</span>}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -154,20 +200,12 @@ export function StepSuccess() {
                 </div>
             </div>
 
-            <a
-                href={`https://wa.me/?text=${getWhatsAppMessage()}`}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-4 rounded-xl shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 transition-all active:scale-95"
-            >
-                <Share2 size={20} /> Compartilhar no WhatsApp
-            </a>
-
             <button
-                onClick={() => window.location.reload()}
-                className="w-full text-slate-500 hover:text-white py-2 text-sm transition-colors"
+                onClick={onFinish}
+                className="w-full bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 font-bold py-4 rounded-xl border border-indigo-100 dark:border-indigo-900/50 hover:bg-indigo-50 dark:hover:bg-slate-600 transition-all flex items-center justify-center gap-2 active:scale-95"
             >
-                Voltar ao Início
+                <span>Finalizar</span>
+                <ArrowRight size={20} />
             </button>
         </div>
     );

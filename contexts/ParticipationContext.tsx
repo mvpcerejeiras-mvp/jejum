@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Member, SystemConfig } from '../types';
-import { getSystemConfig, checkMemberByPhone, saveMember, getSettings } from '../services/db';
+import { getSystemConfig, checkMemberByPhone, saveMember, getSettings, getUserParticipation } from '../services/db';
 
 interface ParticipationContextType {
     step: number;
@@ -13,11 +13,17 @@ interface ParticipationContextType {
     register: (name: string, phone: string) => Promise<{ success: boolean; message?: string }>;
     direction: number; // For animation direction (1 = next, -1 = prev)
     setDirection: (dir: number) => void;
-    appSettings: any; // visual settings
+    isRegistered: boolean;
+    hasParticipated: boolean;
+    participationData: { fasting?: any; prayer?: any[] } | null;
+    getGreeting: () => string;
     fastingData: any;
     setFastingData: (data: any) => void;
     clockData: any;
     setClockData: (data: any) => void;
+    appSettings: any;
+    justSaved: boolean;
+    setJustSaved: (val: boolean) => void;
 }
 
 const ParticipationContext = createContext<ParticipationContextType | undefined>(undefined);
@@ -31,6 +37,8 @@ export function ParticipationProvider({ children }: { children: React.ReactNode 
     const [appSettings, setAppSettings] = useState<any>({});
     const [fastingData, setFastingData] = useState<any>(null);
     const [clockData, setClockData] = useState<any>(null);
+    const [participationData, setParticipationData] = useState<any>(null);
+    const [justSaved, setJustSaved] = useState(false);
 
     useEffect(() => {
         loadInitialData();
@@ -45,10 +53,33 @@ export function ParticipationProvider({ children }: { children: React.ReactNode 
             ]);
             setConfig(conf as SystemConfig);
             setAppSettings(settings);
+
+            // Auto-login persistence
+            const savedPhone = localStorage.getItem('member_phone');
+            if (savedPhone) {
+                const member = await checkMemberByPhone(savedPhone);
+                if (member) {
+                    setUser(member);
+                    await checkParticipation(member.id);
+                }
+            }
         } catch (error) {
             console.error("Failed to load config", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const checkParticipation = async (memberId: string) => {
+        const data = await getUserParticipation(memberId);
+        setParticipationData(data);
+        // Unified data in context if they already participated
+        if (data.fasting) {
+            setFastingData({
+                days: data.fasting.days,
+                type: data.fasting.type,
+                time: data.fasting.time
+            });
         }
     };
 
@@ -57,6 +88,8 @@ export function ParticipationProvider({ children }: { children: React.ReactNode 
             const member = await checkMemberByPhone(phone);
             if (member) {
                 setUser(member);
+                localStorage.setItem('member_phone', phone);
+                await checkParticipation(member.id);
                 return { success: true, member };
             } else {
                 return { success: true, isNewUser: true };
@@ -70,10 +103,11 @@ export function ParticipationProvider({ children }: { children: React.ReactNode 
         try {
             const res = await saveMember({ name, phone });
             if (res.success) {
-                // Fetch the newly created member to get the ID
                 const member = await checkMemberByPhone(phone);
                 if (member) {
                     setUser(member);
+                    localStorage.setItem('member_phone', phone);
+                    setParticipationData({ fasting: undefined, prayer: [] });
                     return { success: true };
                 }
             }
@@ -81,6 +115,24 @@ export function ParticipationProvider({ children }: { children: React.ReactNode 
         } catch (error) {
             return { success: false, message: "Erro interno no cadastro." };
         }
+    };
+
+    const getGreeting = () => {
+        if (!user) return "";
+        const firstName = user.name.split(' ')[0];
+        const nameLower = firstName.toLowerCase();
+
+        // Simple heuristic for common Portuguese feminine names
+        const isFeminine = nameLower.endsWith('a') ||
+            nameLower.endsWith('ia') ||
+            nameLower.endsWith('na') ||
+            nameLower.endsWith('da');
+
+        // Exceptions or specific check for 'Messias'
+        const isActuallyMasculine = nameLower === 'messias' || nameLower === 'lucas' || nameLower === 'isaías';
+
+        const greeting = (isFeminine && !isActuallyMasculine) ? "Bem-vinda" : "Bem-vindo";
+        return `${greeting}, ${firstName}!`;
     };
 
     return (
@@ -93,7 +145,13 @@ export function ParticipationProvider({ children }: { children: React.ReactNode 
             direction, setDirection,
             appSettings,
             fastingData, setFastingData,
-            clockData, setClockData
+            clockData, setClockData,
+            isRegistered: !!user,
+            hasParticipated: !!(participationData?.fasting || participationData?.prayer?.length > 0),
+            participationData,
+            getGreeting,
+            justSaved,
+            setJustSaved
         }}>
             {children}
         </ParticipationContext.Provider>

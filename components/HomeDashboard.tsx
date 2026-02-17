@@ -30,9 +30,9 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ onJoin, onViewSchedule, o
   // 1. Weekly Stats - Updated for multiple days
   const dayCounts = fastDays.map(dayOption => {
     const count = participants.filter(p => p.days && p.days.includes(dayOption)).length;
-    const fullDayName = dayOption.split(' – ')[0];
-    const shortLabel = fullDayName.substring(0, 3);
-    return { fullLabel: fullDayName, shortLabel, count };
+    const dayPart = dayOption.split(' – ')[0].split('-')[0];
+    const shortLabel = dayPart.substring(0, 1).toUpperCase() + dayPart.substring(1, 3).toLowerCase();
+    return { fullLabel: dayOption, shortLabel, count };
   });
   const maxDayCount = Math.max(...dayCounts.map(d => d.count), 1);
 

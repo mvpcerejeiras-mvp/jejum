@@ -70,36 +70,60 @@ export const getParticipants = async (): Promise<Participant[]> => {
   }));
 };
 
+export const getUserParticipation = async (memberId: string): Promise<{ fasting?: Participant, prayer?: any[] }> => {
+  const [fastingRes, prayerRes] = await Promise.all([
+    supabase.from('participants').select('*').eq('member_id', memberId).maybeSingle(),
+    supabase.from('prayer_signups').select('*').eq('member_id', memberId)
+  ]);
+
+  return {
+    fasting: fastingRes.data || undefined,
+    prayer: prayerRes.data || []
+  };
+};
+
 export const saveParticipant = async (participant: Omit<Participant, 'id' | 'createdAt'>): Promise<{ success: boolean; message?: string }> => {
-  // Check for duplicate phone
-  const { data: existing } = await supabase
-    .from('participants')
-    .select('id')
-    .eq('phone', participant.phone)
-    .maybeSingle();
+  try {
+    // Se temos member_id, removemos a participação anterior para evitar duplicidade
+    if (participant.member_id) {
+      const { error: delError } = await supabase
+        .from('participants')
+        .delete()
+        .eq('member_id', participant.member_id);
 
-  if (existing) {
-    return { success: false, message: 'Este número de WhatsApp já está cadastrado.' };
-  }
+      if (delError) console.warn('Non-critical delete error:', delError);
+    } else {
+      // Fallback para busca por telefone caso não tenha member_id (legado)
+      const { data: existing } = await supabase
+        .from('participants')
+        .select('id')
+        .eq('phone', participant.phone)
+        .maybeSingle();
 
-  const { error } = await supabase
-    .from('participants')
-    .insert([
-      {
-        name: participant.name,
-        phone: participant.phone,
-        days: participant.days,
-        time: participant.time,
-        type: participant.type,
+      if (existing) {
+        return { success: false, message: 'Este número de WhatsApp já está cadastrado.' };
       }
-    ]);
+    }
 
-  if (error) {
+    const { error } = await supabase
+      .from('participants')
+      .insert([
+        {
+          name: participant.name,
+          phone: participant.phone,
+          member_id: participant.member_id,
+          days: participant.days,
+          time: participant.time,
+          type: participant.type,
+        }
+      ]);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error: any) {
     console.error('Error saving participant:', error);
     return { success: false, message: 'Erro ao salvar no banco de dados.' };
   }
-
-  return { success: true };
 };
 
 export const getSettings = async (): Promise<AppSettings> => {
@@ -192,21 +216,27 @@ export const uploadLogo = async (file: File): Promise<string | null> => {
 };
 
 export const deleteParticipant = async (id: string): Promise<{ success: boolean; message?: string }> => {
-  const { error, count } = await supabase
-    .from('participants')
-    .delete({ count: 'exact' }) // Request exact count of deleted rows
-    .eq('id', id);
+  try {
+    const { error, count } = await supabase
+      .from('participants')
+      .delete({ count: 'exact' })
+      .eq('id', id);
 
-  if (error) {
-    console.error('Error deleting participant:', error);
-    return { success: false, message: 'Erro ao excluir participant.' };
+    if (error) {
+      console.error('Supabase Delete Error:', error);
+      return { success: false, message: `Erro no banco: ${error.message}` };
+    }
+
+    if (count === 0) {
+      console.warn('Delete count was 0 for ID:', id);
+      return { success: false, message: 'Nenhum registro encontrado para excluir.' };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('System Delete Error:', err);
+    return { success: false, message: 'Erro interno ao processar exclusão.' };
   }
-
-  if (count === 0) {
-    return { success: false, message: 'Erro: Não foi possível excluir. Verifique as permissões ou se o item já foi removido.' };
-  }
-
-  return { success: true };
 };
 
 export const updateParticipant = async (id: string, data: Partial<Participant>): Promise<{ success: boolean; message?: string }> => {
@@ -605,4 +635,14 @@ export const addPrayerSignup = async (campaignId: string, memberId: string, slot
   }
 
   return { success: true };
+};
+
+export const clearPrayerSignups = async (campaignId: string, memberId: string): Promise<{ success: boolean }> => {
+  const { error } = await supabase
+    .from('prayer_signups')
+    .delete()
+    .eq('campaign_id', campaignId)
+    .eq('member_id', memberId);
+
+  return { success: !error };
 };

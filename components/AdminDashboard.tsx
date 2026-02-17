@@ -74,7 +74,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
     if (confirm('Tem certeza que deseja excluir esse participante?')) {
       const res = await deleteParticipant(id);
       if (res.success) {
+        // Optimistic remove
         setParticipants(participants.filter(p => p.id !== id));
+        // Force re-fetch to be 100% sure
+        const updated = await getParticipants();
+        setParticipants(updated);
       } else {
         alert(res.message || 'Erro ao excluir');
       }
@@ -554,11 +558,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                           </td>
                           <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                             <div className="flex flex-wrap gap-1.5">
-                              {p.days.map((day, idx) => (
-                                <span key={idx} className="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-2.5 py-0.5 rounded-full text-xs font-medium whitespace-nowrap shadow-sm">
-                                  {day.split(' – ')[0]}
-                                </span>
-                              ))}
+                              {p.days.map((day, idx) => {
+                                const dayName = day.split(' – ')[0].split('-')[0];
+                                const initial = dayName.substring(0, 1).toUpperCase() + dayName.substring(1, 3).toLowerCase();
+                                return (
+                                  <span key={idx} className="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-2.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap shadow-sm uppercase tracking-tight text-slate-600 dark:text-slate-300">
+                                    {initial}
+                                  </span>
+                                );
+                              })}
                             </div>
                           </td>
                           <td className="px-6 py-4">
@@ -1054,7 +1062,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                           </span>
                         </td>
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-300 text-xs">
-                          {h.days.map(d => d.split(' – ')[0]).join(', ')}
+                          {h.days.map(d => {
+                            const dayName = d.split(' – ')[0].split('-')[0];
+                            return dayName.substring(0, 1).toUpperCase() + dayName.substring(1, 3).toLowerCase();
+                          }).join(', ')}
                         </td>
                         <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-400 text-xs">
                           {new Date(h.archivedAt).toLocaleDateString('pt-BR')}

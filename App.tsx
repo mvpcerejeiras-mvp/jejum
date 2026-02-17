@@ -7,7 +7,7 @@ import { PrayerClock } from './components/PrayerClock';
 import { getSettings } from './services/db';
 import { DEFAULT_THEME, DEFAULT_INSTRUCTION, DEFAULT_APP_TITLE, DEFAULT_LOGO, DEFAULT_DAYS } from './constants';
 import { Flame, Lock, Cross, BookOpen, Heart, Sun, Mountain, Star, Moon, Sparkles } from 'lucide-react';
-import { ParticipationProvider } from './contexts/ParticipationContext';
+import { useParticipation } from './contexts/ParticipationContext';
 import { Wizard } from './components/UnifiedParticipation/Wizard';
 
 const App: React.FC = () => {
@@ -22,6 +22,7 @@ const App: React.FC = () => {
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { user, hasParticipated, getGreeting } = useParticipation() as any;
 
   // Initialize Dark Mode based on localStorage or System Preference
   useEffect(() => {
@@ -88,9 +89,7 @@ const App: React.FC = () => {
 
   if (view === 'wizard') {
     return (
-      <ParticipationProvider>
-        <Wizard onExit={() => setView('home')} />
-      </ParticipationProvider>
+      <Wizard onExit={() => setView('home')} />
     );
   }
 
@@ -135,6 +134,15 @@ const App: React.FC = () => {
               {appSettings.theme}
             </span>
           </div>
+
+          {/* Dynamic Greeting */}
+          {user && (
+            <div className="mt-4 animate-fade-in-up">
+              <h2 className="text-xl md:text-2xl font-bold text-white drop-shadow-sm font-sans">
+                {getGreeting()}
+              </h2>
+            </div>
+          )}
         </div>
 
         {/* Content Card */}
@@ -143,29 +151,67 @@ const App: React.FC = () => {
 
           {view === 'home' && (
             <div className="p-6 md:p-8 space-y-6">
-              {/* Unified Wizard Entry Point */}
-              <div
-                onClick={() => setView('wizard')}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl p-6 text-white cursor-pointer shadow-lg shadow-indigo-500/30 hover:scale-[1.02] transition-transform group relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
-                <div className="relative z-10 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold mb-1 group-hover:text-indigo-100 transition-colors">Participar Agora</h2>
-                    <p className="text-indigo-100 text-sm">Jejum e Relógio de Oração em um só lugar.</p>
+
+              {!user ? (
+                /* Prompt to Login/Identify First */
+                <div
+                  onClick={() => setView('wizard')}
+                  className="bg-indigo-600 rounded-xl p-8 text-center text-white cursor-pointer hover:bg-indigo-700 transition-all border border-indigo-500 shadow-xl group"
+                >
+                  <div className="bg-white/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <Sparkles size={32} />
                   </div>
-                  <div className="bg-white/20 p-3 rounded-full group-hover:bg-white/30 transition-colors">
-                    <Sparkles size={24} />
+                  <h2 className="text-xl font-bold mb-2">Identifique-se para começar</h2>
+                  <p className="text-indigo-100 text-sm">Toque aqui para informar seu telefone e acessar o painel.</p>
+                </div>
+              ) : (
+                /* Unified Wizard Entry Point - Participation Aware */
+                <div
+                  onClick={() => setView('wizard')}
+                  className="cta-shine-effect bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-700 rounded-2xl p-7 text-white cursor-pointer shadow-2xl shadow-indigo-500/40 hover:scale-[1.03] transition-all duration-300 group relative border border-white/10"
+                >
+                  {/* Decorative background blobs */}
+                  <div className="absolute -right-4 -top-4 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-colors"></div>
+                  <div className="absolute -left-4 -bottom-4 w-24 h-24 bg-purple-500/20 rounded-full blur-xl group-hover:bg-purple-500/30 transition-colors"></div>
+
+                  <div className="relative z-10 flex items-center justify-between">
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center gap-2 mb-1">
+                        <span className="bg-white/20 backdrop-blur-md text-[10px] font-bold uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-white/20">
+                          {hasParticipated ? 'Acessar Plano' : 'Unificados'}
+                        </span>
+                      </div>
+                      <h2 className="text-2xl font-black mb-1 group-hover:text-white transition-colors tracking-tight">
+                        {hasParticipated ? 'Minha Participação' : 'Participar Agora'}
+                      </h2>
+                      <p className="text-indigo-100/90 text-sm font-medium leading-tight">
+                        {hasParticipated
+                          ? 'Veja ou edite seus dias e horários.'
+                          : 'Jejum e Relógio de Oração em um só lugar.'
+                        }
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-center gap-2">
+                      <div
+                        className="bg-white/10 backdrop-blur-lg p-4 rounded-2xl ring-1 ring-white/30 group-hover:bg-white/20 group-hover:ring-white/50 transition-all duration-500 shadow-xl"
+                        style={{ animation: 'icon-pulse 3s infinite ease-in-out' }}
+                      >
+                        <Sparkles size={32} className="text-white drop-shadow-lg" />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <HomeDashboard
-                onJoin={() => setView('wizard')}
-                onViewSchedule={() => setView('schedule')}
-                onViewClock={() => setView('clock')}
-                fastDays={appSettings.fastDays}
-              />
+              {user && (
+                <HomeDashboard
+                  onJoin={() => setView('wizard')}
+                  onViewSchedule={() => setView('schedule')}
+                  onViewClock={() => setView('clock')}
+                  fastDays={appSettings.fastDays}
+                />
+              )}
             </div>
           )}
 

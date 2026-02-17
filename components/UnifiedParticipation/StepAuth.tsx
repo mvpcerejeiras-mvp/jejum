@@ -36,6 +36,9 @@ export function StepAuth() {
             } else {
                 if (res.member) {
                     setWelcomeName(res.member.name);
+
+                    // Check if they already participated (already loaded by login call in context)
+                    // If so, they might want to just go to the dashboard
                     setTimeout(() => {
                         const nextStep = config?.eventMode === 'prayer_clock' ? 2 : 1;
                         setStep(nextStep);

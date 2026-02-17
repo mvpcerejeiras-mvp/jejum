@@ -7,7 +7,12 @@ import { StepSuccess } from './StepSuccess';
 import { ChevronLeft, X } from 'lucide-react';
 
 export function Wizard({ onExit }: { onExit: () => void }) {
-    const { step, setStep, loading, config } = useParticipation();
+    const { step, setStep, loading, config, setJustSaved } = useParticipation();
+
+    React.useEffect(() => {
+        // When entering the wizard, assume they intend to save/update
+        setJustSaved(true);
+    }, []);
 
     if (loading) {
         return <div className="min-h-screen flex items-center justify-center text-white">Carregando...</div>;
@@ -42,7 +47,7 @@ export function Wizard({ onExit }: { onExit: () => void }) {
                 {step === 0 && <StepAuth />}
                 {step === 1 && <StepFasting />}
                 {step === 2 && <StepClock />}
-                {step === 3 && <StepSuccess />}
+                {step === 3 && <StepSuccess onFinish={onExit} />}
             </main>
         </div>
     );

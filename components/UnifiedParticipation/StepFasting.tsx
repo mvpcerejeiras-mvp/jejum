@@ -16,11 +16,11 @@ const FAST_TIMES = [
 ];
 
 export function StepFasting() {
-    const { setStep, appSettings, setFastingData, user, config } = useParticipation() as any;
+    const { setStep, appSettings, setFastingData, fastingData, user, config } = useParticipation() as any;
 
-    const [selectedDays, setSelectedDays] = useState<string[]>([]);
-    const [selectedType, setSelectedType] = useState<FastType | ''>('');
-    const [selectedTime, setSelectedTime] = useState<FastTime | ''>('');
+    const [selectedDays, setSelectedDays] = useState<string[]>(fastingData?.days || []);
+    const [selectedType, setSelectedType] = useState<FastType | ''>(fastingData?.type || '');
+    const [selectedTime, setSelectedTime] = useState<FastTime | ''>(fastingData?.time || '');
     const [expandedType, setExpandedType] = useState<string | null>(null);
 
     const activeDays = appSettings.fastDays || [];
@@ -64,8 +64,9 @@ export function StepFasting() {
                 <div className="grid grid-cols-2 gap-2">
                     {activeDays.length > 0 ? activeDays.map((day: string) => {
                         const isSelected = selectedDays.includes(day);
-                        const label = day.split('–')[0].trim(); // "Segunda-feira"
-                        const subLabel = day.split('–')[1]?.trim(); // "Ágape"
+                        const dayPart = day.split(' – ')[0].split('-')[0];
+                        const initial = dayPart.substring(0, 1).toUpperCase() + dayPart.substring(1, 3).toLowerCase();
+                        const subLabel = day.split(' – ')[1]?.trim();
 
                         return (
                             <button
@@ -73,7 +74,7 @@ export function StepFasting() {
                                 onClick={() => handleDayToggle(day)}
                                 className={`p-3 rounded-xl border text-left transition-all relative overflow-hidden ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800'}`}
                             >
-                                <div className="font-bold text-sm">{label}</div>
+                                <div className="font-bold text-sm tracking-tight">{initial}</div>
                                 <div className="text-xs opacity-70">{subLabel}</div>
                                 {isSelected && <div className="absolute top-2 right-2 bg-white text-indigo-600 rounded-full p-0.5"><Check size={10} /></div>}
                             </button>

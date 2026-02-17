@@ -26,6 +26,7 @@ export interface Participant {
   id: string;
   name: string;
   phone: string;
+  member_id?: string; // Link to members table
   days: string[]; // Changed to string array to support multiple days
   time: FastTime;
   type: FastType;

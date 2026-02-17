@@ -101,7 +101,7 @@ const WeeklySchedule: React.FC<WeeklyScheduleProps> = ({ onBack, fastDays }) => 
 
                             <div className="flex justify-between items-start mb-4">
                                 <h3 className={`font-bold text-lg ${isCurrentDay ? 'text-indigo-900 dark:text-indigo-200' : 'text-slate-800 dark:text-slate-200'}`}>
-                                    {day}
+                                    {day.split(' – ')[0].split('-')[0].substring(0, 1).toUpperCase() + day.split(' – ')[0].split('-')[0].substring(1, 3).toLowerCase()}
                                 </h3>
                                 <span className={`text-xs font-bold px-2 py-1 rounded-full ${isCurrentDay ? 'bg-white/50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'}`}>
                                     {dayParticipants.length}
