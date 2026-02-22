@@ -234,21 +234,23 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess, onCancel
 
         {/* Time */}
         <div className="space-y-3">
-          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">4️⃣ Escolha do Horário do Jejum</label>
+          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">4️⃣ Horário de Início</label>
           <div className="space-y-2">
-            {TIME_OPTIONS.map((time) => (
-              <label key={time} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${formData.time === time ? 'border-green-500 bg-green-50 dark:bg-green-900/20 dark:border-green-600 ring-1 ring-green-500' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 bg-white dark:bg-slate-800'}`}>
-                <input
-                  type="radio"
-                  name="fastTime"
-                  value={time}
-                  checked={formData.time === time}
-                  onChange={(e) => setFormData({ ...formData, time: e.target.value as FastTime })}
-                  className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-500"
-                />
-                <span className={`ml-3 text-sm ${formData.time === time ? 'text-slate-800 dark:text-green-100' : 'text-slate-700 dark:text-slate-300'}`}>{time}</span>
-              </label>
-            ))}
+            {TIME_OPTIONS.map((time) => {
+              return (
+                <label key={time} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${formData.time === time ? 'border-green-500 bg-green-50 dark:bg-green-900/20 dark:border-green-600 ring-1 ring-green-500' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 bg-white dark:bg-slate-800'}`}>
+                  <input
+                    type="radio"
+                    name="fastTime"
+                    value={time}
+                    checked={formData.time === time}
+                    onChange={(e) => setFormData({ ...formData, time: e.target.value as FastTime })}
+                    className="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500 dark:bg-slate-700 dark:border-slate-500"
+                  />
+                  <span className={`ml-3 text-sm ${formData.time === time ? 'text-slate-800 dark:text-green-100' : 'text-slate-700 dark:text-slate-300'}`}>{time}</span>
+                </label>
+              );
+            })}
           </div>
         </div>
 

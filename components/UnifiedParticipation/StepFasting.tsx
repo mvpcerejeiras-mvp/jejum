@@ -9,9 +9,10 @@ import { TYPE_DESCRIPTIONS } from '../../constants';
 // For now, let's keep the local FAST_TIMES but use TYPE_DESCRIPTIONS for the types.
 
 const FAST_TIMES = [
-    { id: FastTime.TWELVE_AM_PM, label: '12h (00h - 12h)' },
-    { id: FastTime.NINE_HOURS, label: '9h (06h - 15h)' },
-    { id: FastTime.TWELVE_HOURS, label: '12h (06h - 18h)' },
+    { id: FastTime.TWELVE_AM_PM, label: '12h' },
+    { id: FastTime.NINE_HOURS, label: '15h' },
+    { id: FastTime.TWELVE_HOURS, label: '18h' },
+    { id: FastTime.TWENTY_FOUR_HOURS, label: '24 HORAS' },
     { id: FastTime.CUSTOM, label: 'Personalizado' },
 ];
 
@@ -54,7 +55,7 @@ export function StepFasting() {
     return (
         <div className="animate-fade-in-up space-y-6 pb-24">
             <div className="text-center">
-                <h2 className="text-2xl font-bold text-white">Escolha seu Jejum</h2>
+                <h2 className="text-2xl font-bold text-white">Escolha seu Jejum (V2)</h2>
                 <p className="text-slate-300">Olá, <span className="text-indigo-400 font-bold">{user?.name}</span>! Como você vai participar?</p>
             </div>
 
@@ -103,6 +104,7 @@ export function StepFasting() {
                                         {type.id === FastType.DANIEL && '🥗'}
                                         {type.id === FastType.INTENSIFIED && '🔥'}
                                         {type.id === FastType.RENUNCIATION && '❌'}
+                                        {type.id === FastType.DEEP_SEARCH && '✨'}
                                     </span>
                                     <div className="flex-1">
                                         <div className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-slate-200'}`}>{type.title}</div>
@@ -138,7 +140,7 @@ export function StepFasting() {
 
             {/* Fast Time */}
             <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Período</h3>
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Horário de Início</h3>
                 <div className="grid grid-cols-2 gap-2">
                     {FAST_TIMES.map((time) => (
                         <button

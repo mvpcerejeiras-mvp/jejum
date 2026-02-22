@@ -93,11 +93,6 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
         else if (hasFasting) propulsion = "Jejum";
         else propulsion = "Oração";
 
-        // Clean up the time string
-        const cleanTime = fastingData?.time?.includes('– das ')
-            ? fastingData.time.split('– das ')[1]
-            : fastingData?.time;
-
         // Find fasting description details
         const typeInfo = TYPE_DESCRIPTIONS.find(t => t.id === fastingData?.type);
         let detailText = "";
@@ -105,14 +100,16 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
             detailText = typeInfo.description.map(d => `• ${d.text}: ${d.detail}`).join('\n');
         }
 
+        const timeLabel = fastingData?.time;
+
         let text = `*Graça e paz ${firstName}!*\n\n`;
-        text += `✅ Seu Proposito de ${propulsion} foi Confirmado!\n\n`;
+        text += `✅ Seu Propósito de ${propulsion} foi Confirmado!\n\n`;
         text += `Que Deus abençoe sua consagração 🙏🔥\n\n`;
 
         if (hasFasting) {
             const dayNames = fastingData.days.map((d: string) => d.split('–')[0].trim()).join(', ');
             text += `🗓 *Jejum –* ${dayNames}\n`;
-            text += `⏰ ${cleanTime} - "${typeInfo?.title || fastingData.type}"\n\n`;
+            text += `⏰ Início da alimentação: ${timeLabel} - "${typeInfo?.title || fastingData.type}"\n\n`;
 
             if (detailText) {
                 text += `*Detalhes do Jejum:*\n${detailText}\n\n`;
@@ -178,7 +175,9 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
                             <div className="text-sm text-slate-300">
                                 {fastingData?.days.map((d: string) => d.split('–')[0].trim()).join(', ')}
                             </div>
-                            <div className="text-xs text-slate-500 mt-1">{fastingData?.type} • {fastingData?.time}</div>
+                            <div className="text-xs text-slate-500 mt-1">
+                                {fastingData?.type} • Início: {fastingData?.time}
+                            </div>
                         </div>
                     </div>
 

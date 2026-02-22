@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParticipation } from '../../contexts/ParticipationContext';
 import { getPrayerCampaigns, getPrayerSignups } from '../../services/db';
-import { ArrowLeft, ArrowRight, Clock, Users, Flame, Heart } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clock, Users, Flame } from 'lucide-react';
 
 export function StepClock() {
-    const { setStep, setClockData, user, config, participationData } = useParticipation() as any;
+    const { setStep, setClockData, participationData, appSettings } = useParticipation() as any;
     const [activeCampaign, setActiveCampaign] = useState<any>(null);
     const [signups, setSignups] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Pre-fill slots if user already has prayer signups
     const initialSlots = participationData?.prayer?.map((s: any) => s.slot_number) || [];
     const [selectedSlots, setSelectedSlots] = useState<number[]>(initialSlots);
     const [mode, setMode] = useState<'intro' | 'selection'>(initialSlots.length > 0 ? 'selection' : 'intro');
@@ -20,44 +19,37 @@ export function StepClock() {
 
     const loadCampaign = async () => {
         setLoading(true);
-        const campaigns = await getPrayerCampaigns();
-        // Filter for active campaign. If config.activeCampaignId is set, use that, else use first active.
-        const active = campaigns.find((c: any) => c.isActive); // Simplification
-
-        if (active) {
-            setActiveCampaign(active);
-            const s = await getPrayerSignups(active.id);
-            setSignups(s);
+        try {
+            const campaigns = await getPrayerCampaigns();
+            const active = campaigns.find((c: any) => c.isActive);
+            if (active) {
+                setActiveCampaign(active);
+                const s = await getPrayerSignups(active.id);
+                setSignups(s);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handleSlotClick = (slot: number) => {
-        setSelectedSlots(prev => {
-            if (prev.includes(slot)) {
-                return prev.filter(s => s !== slot);
-            } else {
-                return [...prev, slot];
-            }
-        });
+        setSelectedSlots(prev => prev.includes(slot) ? prev.filter(s => s !== slot) : [...prev, slot]);
     };
 
     const handleNext = () => {
         if (selectedSlots.length === 0) return;
         setClockData({
             campaignId: activeCampaign.id,
-            slotNumbers: selectedSlots // Now sending array
+            slotNumbers: selectedSlots
         });
-        setStep(3); // Success
+        setStep(3);
     };
 
     const handleSkip = () => {
-        setClockData(null); // Explicitly skipped
-        setStep(3); // Success
-    };
-
-    const handleIntroAccept = () => {
-        setMode('selection');
+        setClockData(null);
+        setStep(3);
     };
 
     if (loading) return <div className="text-white text-center py-10">Carregando horários...</div>;
@@ -71,22 +63,15 @@ export function StepClock() {
         );
     }
 
-    // Helper to calculate time for slot
     const getSlotTime = (slot: number) => {
         const date = new Date(activeCampaign.startDate);
         date.setHours(date.getHours() + slot);
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
-    // Helper to get count for slot
-    const getSlotCount = (slot: number) => {
-        return signups.filter(s => s.slotNumber === slot).length;
-    };
-
-    // Assuming 24h or duration from campaign
+    const getSlotCount = (slot: number) => signups.filter(s => s.slotNumber === slot).length;
     const slots = Array.from({ length: activeCampaign.duration }, (_, i) => i);
 
-    // --- MODE: INTRO (Upsell) ---
     if (mode === 'intro') {
         return (
             <div className="animate-fade-in-up space-y-8 py-10 text-center">
@@ -96,104 +81,52 @@ export function StepClock() {
                         <Flame size={48} className="text-white animate-bounce" />
                     </div>
                 </div>
-
                 <div className="space-y-4 max-w-sm mx-auto">
-                    <h2 className="text-3xl font-bold text-white leading-tight">
-                        Você pode assumir um turno de oração?
-                    </h2>
+                    <h2 className="text-3xl font-bold text-white leading-tight">Você pode assumir um turno de oração?</h2>
                     <p className="text-slate-300 text-lg leading-relaxed">
-                        Serão <strong className="text-indigo-400">12 horas</strong> de intercessão. Escolha 1 hora para clamar e fortalecer a igreja em oração.
+                        Serão <strong className="text-indigo-400">{activeCampaign.duration} horas</strong> de intercessão. Escolha turnos para clamar e fortalecer a igreja em oração.
                     </p>
                 </div>
-
                 <div className="grid grid-cols-1 gap-4 max-w-xs mx-auto pt-4">
-                    <button
-                        onClick={handleIntroAccept}
-                        className="w-full py-4 px-6 bg-white text-indigo-900 font-extrabold rounded-2xl shadow-xl shadow-indigo-900/50 hover:bg-indigo-50 hover:scale-105 transition-all text-lg flex items-center justify-center gap-2 group"
-                    >
-                        🙌 Quero meu turno
-                    </button>
-
-                    <button
-                        onClick={handleSkip}
-                        className="w-full py-3 px-6 text-slate-400 font-medium hover:text-white transition-colors"
-                    >
-                        Ficarei somente no jejum
-                    </button>
+                    <button onClick={() => setMode('selection')} className="w-full py-4 px-6 bg-white text-indigo-900 font-extrabold rounded-2xl shadow-xl hover:bg-indigo-50 transition-all text-lg flex items-center justify-center gap-2">🙌 Quero meu turno</button>
+                    <button onClick={handleSkip} className="w-full py-3 px-6 text-slate-400 font-medium hover:text-white transition-colors">Ficarei somente no jejum</button>
                 </div>
             </div>
         );
     }
 
-    // --- MODE: SELECTION ---
     return (
         <div className="animate-fade-in-up space-y-6 pb-24">
             <div className="text-center">
                 <div className="inline-block p-3 bg-indigo-500/20 rounded-full mb-2">
                     <Clock className="text-indigo-400" size={32} />
                 </div>
-                <h2 className="text-2xl font-bold text-white">Relógio de Oração</h2>
+                <h2 className="text-2xl font-bold text-white">{appSettings?.prayerClockTitle || 'Relógio de Oração'}</h2>
                 <p className="text-slate-300">Escolha seus horários de intercessão.</p>
             </div>
-
-            <div className="grid grid-cols-3 gap-2 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+            <div className="grid grid-cols-3 gap-2 max-h-[50vh] overflow-y-auto pr-1">
                 {slots.map(slot => {
-                    const time = getSlotTime(slot);
-                    const count = getSlotCount(slot);
                     const isSelected = selectedSlots.includes(slot);
-                    const isFull = count >= 10; // Hard limit for demo
-
+                    const count = getSlotCount(slot);
+                    const isFull = count >= 10;
                     return (
                         <button
                             key={slot}
                             disabled={isFull}
                             onClick={() => handleSlotClick(slot)}
-                            className={`
-                                relative p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all
-                                ${isSelected
-                                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/50 scale-105 z-10'
-                                    : 'bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-700'}
-                                ${isFull ? 'opacity-50 cursor-not-allowed grayscale' : ''}
-                            `}
+                            className={`relative p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300'} ${isFull ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                            <span className="text-lg font-bold">{time}</span>
-                            <div className="flex items-center gap-1 text-xs opacity-70">
-                                <Users size={10} /> {count}
-                            </div>
-                            {isSelected && (
-                                <div className="absolute top-1 right-1 w-2 h-2 bg-white rounded-full"></div>
-                            )}
+                            <span className="text-lg font-bold">{getSlotTime(slot)}</span>
+                            <div className="flex items-center gap-1 text-xs opacity-70"><Users size={10} /> {count}</div>
                         </button>
                     );
                 })}
             </div>
-
-            <p className="text-center text-xs text-slate-500">
-                {selectedSlots.length > 0 ? `${selectedSlots.length} horário(s) selecionado(s)` : 'Selecione pelo menos um horário'}
-            </p>
-
-            {/* Footer Action */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-gray-900 via-gray-900/90 to-transparent z-50 backdrop-blur-sm">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-gray-900/90 backdrop-blur-sm z-50">
                 <div className="max-w-lg mx-auto flex gap-3">
-                    <button
-                        onClick={() => setMode('intro')}
-                        className="px-4 py-4 bg-slate-800 text-slate-300 font-bold rounded-xl hover:bg-slate-700 transition-colors"
-                    >
-                        <ArrowLeft size={20} />
-                    </button>
-                    <button
-                        onClick={handleSkip}
-                        className="px-4 py-4 text-slate-400 hover:text-white font-medium transition-colors"
-                    >
-                        Pular
-                    </button>
-                    <button
-                        onClick={handleNext}
-                        disabled={selectedSlots.length === 0}
-                        className="flex-1 bg-white text-indigo-900 font-bold py-4 rounded-xl shadow-lg hover:bg-slate-100 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Confirmar <ArrowRight size={20} />
-                    </button>
+                    <button onClick={() => setMode('intro')} className="px-4 py-4 bg-slate-800 text-slate-300 rounded-xl"><ArrowLeft size={20} /></button>
+                    <button onClick={handleSkip} className="px-4 py-4 text-slate-400">Pular</button>
+                    <button onClick={handleNext} disabled={selectedSlots.length === 0} className="flex-1 bg-white text-indigo-900 font-bold py-4 rounded-xl disabled:opacity-50">Confirmar <ArrowRight size={20} /></button>
                 </div>
             </div>
         </div>

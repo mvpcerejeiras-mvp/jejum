@@ -9,10 +9,11 @@ export enum FastDay {
 }
 
 export enum FastTime {
-  TWELVE_AM_PM = '12 horas – da meia-noite (00h) ao meio-dia (12h)',
-  NINE_HOURS = '9 horas – das 06h às 15h',
-  TWELVE_HOURS = '12 horas – das 06h às 18h',
-  CUSTOM = 'Jejum diário personalizado',
+  TWELVE_AM_PM = '12h',
+  NINE_HOURS = '15h',
+  TWELVE_HOURS = '18h',
+  TWENTY_FOUR_HOURS = '24h',
+  CUSTOM = 'Personalizado',
 }
 
 export enum FastType {
@@ -20,6 +21,7 @@ export enum FastType {
   DANIEL = 'Opção 2 – Jejum de Daniel',
   INTENSIFIED = 'Opção 3 – Jejum Parcial Intensificado',
   RENUNCIATION = 'Opção 4 – Jejum com Renúncia Espiritual',
+  DEEP_SEARCH = 'Opção 5 – Jejum Busca Profunda',
 }
 
 export interface Participant {
@@ -39,6 +41,7 @@ export interface AppSettings {
   appTitle?: string;
   logoId?: string;
   fastDays: string[]; // List of active fasting days
+  prayerClockTitle?: string;
 }
 
 export interface Member {

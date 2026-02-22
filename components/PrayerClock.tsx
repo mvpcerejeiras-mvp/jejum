@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParticipation } from '../contexts/ParticipationContext';
 import { Clock, Users, Check, AlertCircle, X } from 'lucide-react';
 import { getPrayerCampaigns, getPrayerSignups, addPrayerSignup, getMembers } from '../services/db';
 import { PrayerCampaign, PrayerSignup, Member } from '../types';
@@ -100,6 +101,7 @@ export function PrayerClock() {
     }
 
     // Calculate Data
+    const { user, config, appSettings } = useParticipation();
     const duration = activeCampaign.duration;
     const slots = Array.from({ length: duration }, (_, i) => i);
     const slotCounts = slots.map(s => signups.filter(su => su.slotNumber === s).length);
@@ -115,7 +117,7 @@ export function PrayerClock() {
             <div className="text-center mb-10">
                 <h1 className="text-3xl md:text-5xl font-black text-indigo-900 dark:text-indigo-400 mb-4 flex items-center justify-center gap-3">
                     <Clock className="w-8 h-8 md:w-12 md:h-12 text-indigo-600 dark:text-indigo-400" />
-                    {activeCampaign.title}
+                    {activeCampaign?.title || appSettings?.prayerClockTitle || 'Relógio de Oração'}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto text-lg mb-6">
                     Escolha seu horário de intercessão e assuma seu posto nesta batalha espiritual!

@@ -210,6 +210,7 @@ const App: React.FC = () => {
                   onViewSchedule={() => setView('schedule')}
                   onViewClock={() => setView('clock')}
                   fastDays={appSettings.fastDays}
+                  appSettings={appSettings}
                 />
               )}
             </div>

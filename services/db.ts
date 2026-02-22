@@ -148,9 +148,10 @@ export const getSettings = async (): Promise<AppSettings> => {
   return {
     theme: data.theme || DEFAULT_THEME,
     instruction: data.instruction || DEFAULT_INSTRUCTION,
-    appTitle: data.app_title || DEFAULT_APP_TITLE, // Map DB snake_case
+    appTitle: data.app_title || DEFAULT_APP_TITLE,
     logoId: data.logo_id || DEFAULT_LOGO,
     fastDays: data.fast_days || DEFAULT_DAYS,
+    prayerClockTitle: data.prayer_clock_title || '',
   };
 };
 
@@ -175,6 +176,7 @@ export const saveSettings = async (settings: AppSettings): Promise<{ success: bo
         app_title: settings.appTitle,
         logo_id: settings.logoId,
         fast_days: settings.fastDays,
+        prayer_clock_title: settings.prayerClockTitle,
         updated_at: new Date().toISOString()
       })
       .eq('id', current.id);
@@ -189,7 +191,8 @@ export const saveSettings = async (settings: AppSettings): Promise<{ success: bo
         instruction: settings.instruction,
         app_title: settings.appTitle,
         logo_id: settings.logoId,
-        fast_days: settings.fastDays
+        fast_days: settings.fastDays,
+        prayer_clock_title: settings.prayerClockTitle
       });
     return { success: !error };
   }

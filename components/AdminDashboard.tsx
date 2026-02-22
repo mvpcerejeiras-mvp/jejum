@@ -50,9 +50,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
   }, [onSettingsChange]); // Reload when settings change trigger happens (e.g. parent refresh, though here we trigger parent)
 
   const handleSaveSettings = async () => {
-    await saveSettings(settings);
-    onSettingsChange();
-    alert('Configurações salvas!');
+    const res = await saveSettings(settings);
+    if (res.success) {
+      onSettingsChange();
+      alert('Configurações salvas!');
+    } else {
+      alert('Erro ao salvar as configurações. Verifique a conexão ou se o campo é suportado.');
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -908,6 +912,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                   value={settings.appTitle}
                   onChange={e => setSettings({ ...settings, appTitle: e.target.value })}
                   placeholder="Ex: Jejum Congregacional"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Título do Relógio de Oração</label>
+                <input
+                  type="text"
+                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none"
+                  value={settings.prayerClockTitle || ''}
+                  onChange={e => setSettings({ ...settings, prayerClockTitle: e.target.value })}
+                  placeholder="Padrão: Relógio de Oração"
                 />
               </div>
 
