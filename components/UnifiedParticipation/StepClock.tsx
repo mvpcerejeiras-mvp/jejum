@@ -4,7 +4,7 @@ import { getPrayerCampaigns, getPrayerSignups } from '../../services/db';
 import { ArrowLeft, ArrowRight, Clock, Users, Flame } from 'lucide-react';
 
 export function StepClock() {
-    const { setStep, setClockData, participationData, appSettings } = useParticipation() as any;
+    const { setStep, setClockData, participationData, appSettings, isAdmin } = useParticipation() as any;
     const [activeCampaign, setActiveCampaign] = useState<any>(null);
     const [signups, setSignups] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -106,13 +106,28 @@ export function StepClock() {
                     const isSelected = selectedSlots.includes(slot);
                     const count = getSlotCount(slot);
                     const isFull = count >= currentLimit;
+                    const isNearFull = count >= currentLimit - 2 && !isFull;
+
+                    let statusLabel = "LIVRE";
+                    let statusColor = "text-emerald-400";
+                    if (isFull) {
+                        statusLabel = "LOTADO";
+                        statusColor = "text-red-500";
+                    } else if (isNearFull) {
+                        statusLabel = "QUASE CHEIO";
+                        statusColor = "text-amber-400";
+                    }
+
                     return (
                         <button
                             key={slot}
-                            disabled={isSelected ? false : isFull}
+                            disabled={isSelected ? false : (isFull && !isAdmin)}
                             onClick={() => handleSlotClick(slot)}
-                            className={`relative p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300'} ${isFull && !isSelected ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
+                            className={`relative p-3 pt-4 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300'} ${isFull && !isSelected && !isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
+                            <span className={`absolute top-1.5 text-[9px] font-black uppercase tracking-wider ${isSelected ? 'text-indigo-100' : statusColor}`}>
+                                {statusLabel}
+                            </span>
                             <span className="text-lg font-bold">{getSlotTime(slot)}</span>
                             <div className="flex items-center gap-1 text-xs opacity-70">
                                 <Users size={10} />

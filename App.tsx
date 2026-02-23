@@ -21,7 +21,7 @@ const App: React.FC = () => {
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const { user, hasParticipated, getGreeting, setStep } = useParticipation() as any;
+  const { user, hasParticipated, getGreeting, setStep, setIsAdmin } = useParticipation() as any;
 
   // Initialize Dark Mode based on localStorage or System Preference
   useEffect(() => {
@@ -61,6 +61,7 @@ const App: React.FC = () => {
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === 'admin123') {
+      setIsAdmin(true);
       setView('admin');
       setPassword('');
     } else {
@@ -283,7 +284,10 @@ const App: React.FC = () => {
 
           {view === 'admin' && (
             <AdminDashboard
-              onLogout={() => setView('home')}
+              onLogout={() => {
+                setIsAdmin(false);
+                setView('home');
+              }}
               onSettingsChange={() => setRefreshKey(k => k + 1)}
             />
           )}

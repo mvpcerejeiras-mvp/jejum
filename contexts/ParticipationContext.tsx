@@ -24,6 +24,8 @@ interface ParticipationContextType {
     appSettings: any;
     justSaved: boolean;
     setJustSaved: (val: boolean) => void;
+    isAdmin: boolean;
+    setIsAdmin: (val: boolean) => void;
 }
 
 const ParticipationContext = createContext<ParticipationContextType | undefined>(undefined);
@@ -39,6 +41,7 @@ export function ParticipationProvider({ children }: { children: React.ReactNode 
     const [clockData, setClockData] = useState<any>(null);
     const [participationData, setParticipationData] = useState<any>(null);
     const [justSaved, setJustSaved] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
         loadInitialData();
@@ -151,7 +154,9 @@ export function ParticipationProvider({ children }: { children: React.ReactNode 
             participationData,
             getGreeting,
             justSaved,
-            setJustSaved
+            setJustSaved,
+            isAdmin,
+            setIsAdmin
         }}>
             {children}
         </ParticipationContext.Provider>
