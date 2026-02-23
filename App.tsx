@@ -3,7 +3,6 @@ import RegistrationForm from './components/RegistrationForm';
 import AdminDashboard from './components/AdminDashboard';
 import HomeDashboard from './components/HomeDashboard';
 import WeeklySchedule from './components/WeeklySchedule';
-import { PrayerClock } from './components/PrayerClock';
 import { getSettings } from './services/db';
 import { DEFAULT_THEME, DEFAULT_INSTRUCTION, DEFAULT_APP_TITLE, DEFAULT_LOGO, DEFAULT_DAYS } from './constants';
 import { Flame, Lock, Cross, BookOpen, Heart, Sun, Mountain, Star, Moon, Sparkles } from 'lucide-react';
@@ -22,7 +21,7 @@ const App: React.FC = () => {
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const { user, hasParticipated, getGreeting } = useParticipation() as any;
+  const { user, hasParticipated, getGreeting, setStep } = useParticipation() as any;
 
   // Initialize Dark Mode based on localStorage or System Preference
   useEffect(() => {
@@ -208,7 +207,10 @@ const App: React.FC = () => {
                 <HomeDashboard
                   onJoin={() => setView('wizard')}
                   onViewSchedule={() => setView('schedule')}
-                  onViewClock={() => setView('clock')}
+                  onViewClock={() => {
+                    setStep(3); // Clock step
+                    setView('wizard');
+                  }}
                   fastDays={appSettings.fastDays}
                   appSettings={appSettings}
                 />
@@ -249,17 +251,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {view === 'clock' && (
-            <div className="relative">
-              <button
-                onClick={() => setView('home')}
-                className="absolute top-4 left-4 z-10 p-2 bg-white/80 rounded-full shadow-sm hover:bg-white text-gray-600"
-              >
-                ← Voltar
-              </button>
-              <PrayerClock />
-            </div>
-          )}
+
 
           {view === 'login' && (
             <div className="p-8 md:p-12 flex flex-col items-center justify-center min-h-[400px]">
