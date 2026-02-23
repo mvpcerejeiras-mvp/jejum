@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { PrayerCampaignManager } from './PrayerCampaignManager';
 import { getParticipants, getSettings, saveSettings, uploadLogo, updateParticipant, deleteParticipant, getMembers, saveMember, updateMember, deleteMember, migrateParticipantsToMembers, deleteAllMembers, archiveCurrentFast, getMemberHistory, getSystemConfig, saveSystemConfig } from '../services/db';
 import { Participant, AppSettings, FastTime, Member, FastingHistory, SystemConfig } from '../types';
-import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical, Pencil, Trash, X, RefreshCw, Archive, History, Sparkles } from 'lucide-react';
+import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical, Pencil, Trash, X, RefreshCw, Archive, History, Sparkles, MessageCircle } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { processReminders } from '../services/reminders';
+import { sendWhatsAppMessage } from '../services/whatsapp';
 import { TIME_OPTIONS, TYPE_DESCRIPTIONS, DEFAULT_DAYS } from '../constants';
 
 interface AdminDashboardProps {
@@ -84,6 +85,73 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
 
   // CRUD State
   const [editingParticipant, setEditingParticipant] = useState<Participant | null>(null);
+
+  const handleSendWhatsApp = async (p: Participant) => {
+    // Pegar apenas o primeiro nome
+    const firstName = p.name.split(' ')[0];
+
+    // Buscar horários de oração e informações da campanha
+    let prayerInfo = "";
+    if (p.member_id) {
+      const { data: signups } = await supabase
+        .from('prayer_signups')
+        .select(`
+          slot_number,
+          campaign:prayer_campaigns(start_date)
+        `)
+        .eq('member_id', p.member_id)
+        .order('slot_number', { ascending: true });
+
+      if (signups && signups.length > 0) {
+        prayerInfo = "\n\n🕗 *Relógio de Oração (08/03)*";
+        signups.forEach(s => {
+          // Calcular a hora exata baseada no slot_number e na hora de início (06:00)
+          const hour = (6 + s.slot_number).toString().padStart(2, '0');
+          prayerInfo += `\n${hour}:00 – Intercessão na igreja`;
+        });
+      }
+    }
+
+    // Configurar informações de tempo e dias
+    const isFullWeek = p.days.length === settings.fastDays.length && settings.fastDays.length > 0;
+    const daysStr = isFullWeek ? "Semana toda de Jejum (Segunda a Sexta)" : p.days.map(d => d.split(' – ')[0]).join(', ');
+
+    // Buscar detalhes do tipo de jejum nas constantes
+    const typeObj = TYPE_DESCRIPTIONS.find(t => t.id === p.type);
+    const details = typeObj?.description.map(d => `* ${d.text}: ${d.detail}`).join('\n') || "";
+
+    // Lógica de horários (Mantendo o padrão do exemplo do usuário)
+    let timeInfo = "";
+    if (p.type.includes('Opção 5')) {
+      timeInfo = `⏰ Início do Jejum: 02/03 às 18h ou 19h\n🏁 Entrega do Jejum: 03/03 às 18h ou 19h (24h depois)`;
+    } else {
+      const endTime = p.time === 'Personalizado' ? 'horário escolhido' : p.time;
+      timeInfo = `⏰ Início do Jejum: 02/03 às 00:00h\n🏁 Entrega do Jejum: 06/03 às ${endTime}`;
+    }
+
+    const msg = `Graça e paz ${firstName}!
+
+✅ Seu Propósito de Jejum e Oração foi Confirmado!
+
+Que Deus abençoe sua consagração 🙏🔥
+
+🗓 Jejum – ${daysStr}
+🚀 ${p.type}
+
+${timeInfo}
+
+Detalhes do Jejum:
+${details}${prayerInfo}
+
+Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
+
+    const res = await sendWhatsAppMessage(p.phone, msg);
+    if (res.success) {
+      alert(`Mensagem enviada com sucesso para ${firstName}!`);
+    } else {
+      alert(`Erro ao enviar: ${res.message}`);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir esse participante?')) {
@@ -644,6 +712,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                           <td className="px-8 py-5 text-right">
                             <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
                               <button
+                                onClick={() => handleSendWhatsApp(p)}
+                                className="p-2 text-slate-400 hover:text-green-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all shadow-sm hover:shadow-md"
+                                title="Enviar para WhatsApp"
+                              >
+                                <MessageCircle size={18} />
+                              </button>
+                              <button
                                 onClick={() => handleEditClick(p)}
                                 className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all shadow-sm hover:shadow-md"
                                 title="Editar"
@@ -901,8 +976,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                           </td>
                           <td className="px-6 py-4">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${log.type === 'fasting'
-                                ? 'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800'
-                                : 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-800'
+                              ? 'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800'
+                              : 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-800'
                               }`}>
                               {log.type === 'fasting' ? 'Jejum' : 'Oração'}
                             </span>
