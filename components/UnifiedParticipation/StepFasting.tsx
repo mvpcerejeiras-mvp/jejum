@@ -17,7 +17,7 @@ const FAST_TIMES = [
 ];
 
 export function StepFasting() {
-    const { setStep, appSettings, setFastingData, fastingData, user, config } = useParticipation() as any;
+    const { setStep, appSettings, setFastingData, fastingData, user, config, setDirection } = useParticipation() as any;
 
     const [selectedDays, setSelectedDays] = useState<string[]>(fastingData?.days || []);
     const [selectedType, setSelectedType] = useState<FastType | ''>(fastingData?.type || '');
@@ -41,11 +41,11 @@ export function StepFasting() {
             time: selectedTime
         });
 
-        // Skip to success if only fasting mode
-        // Config is now available from top level scope
+        // Navigate based on mode
         if (config?.eventMode === 'fasting') {
-            setStep(3);
+            setStep(4); // Skip to success (StepSuccess is now 4)
         } else {
+            setDirection(1);
             setStep(2); // Go to Clock Upsell
         }
     };
@@ -55,7 +55,7 @@ export function StepFasting() {
     return (
         <div className="animate-fade-in-up space-y-6 pb-24">
             <div className="text-center">
-                <h2 className="text-2xl font-bold text-white">Escolha seu Jejum (V2)</h2>
+                <h2 className="text-2xl font-bold text-white">Escolha seu Jejum</h2>
                 <p className="text-slate-300">Olá, <span className="text-indigo-400 font-bold">{user?.name}</span>! Como você vai participar?</p>
             </div>
 

@@ -3,6 +3,8 @@ import { PrayerCampaignManager } from './PrayerCampaignManager';
 import { getParticipants, getSettings, saveSettings, uploadLogo, updateParticipant, deleteParticipant, getMembers, saveMember, updateMember, deleteMember, migrateParticipantsToMembers, deleteAllMembers, archiveCurrentFast, getMemberHistory, getSystemConfig, saveSystemConfig } from '../services/db';
 import { Participant, AppSettings, FastTime, Member, FastingHistory, SystemConfig } from '../types';
 import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical, Pencil, Trash, X, RefreshCw, Archive, History, Sparkles } from 'lucide-react';
+import { supabase } from '../services/supabaseClient';
+import { processReminders } from '../services/reminders';
 import { TIME_OPTIONS, TYPE_DESCRIPTIONS, DEFAULT_DAYS } from '../constants';
 
 interface AdminDashboardProps {
@@ -21,11 +23,13 @@ const LOGO_OPTIONS = [
 ];
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsChange }) => {
-  const [activeTab, setActiveTab] = useState<'participants' | 'settings' | 'analytics' | 'members' | 'prayer-clock' | 'prayer-campaigns'>('participants');
+  const [activeTab, setActiveTab] = useState<'participants' | 'settings' | 'analytics' | 'members' | 'prayer-clock' | 'prayer-campaigns' | 'reminders'>('participants');
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [systemConfig, setSystemConfig] = useState<SystemConfig | null>(null);
   const [settings, setSettings] = useState<AppSettings>({ theme: '', instruction: '', appTitle: '', logoId: '', fastDays: [] });
+  const [reminderLogs, setReminderLogs] = useState<any[]>([]);
+  const [isProcessingReminders, setIsProcessingReminders] = useState(false);
 
   // Filters
   const [filterDay, setFilterDay] = useState('');
@@ -45,6 +49,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
       setSettings(sets);
       const config = await getSystemConfig();
       setSystemConfig(config as SystemConfig);
+
+      const { data: logs } = await supabase
+        .from('reminder_logs')
+        .select('*, members(name, phone)')
+        .order('sent_at', { ascending: false })
+        .limit(50);
+      setReminderLogs(logs || []);
     };
     loadData();
   }, [onSettingsChange]); // Reload when settings change trigger happens (e.g. parent refresh, though here we trigger parent)
@@ -76,14 +87,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
 
   const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir esse participante?')) {
+      console.log(`[Admin] Iniciando exclusão do participante ID: ${id}`);
       const res = await deleteParticipant(id);
+
       if (res.success) {
-        // Optimistic remove
-        setParticipants(participants.filter(p => p.id !== id));
-        // Force re-fetch to be 100% sure
-        const updated = await getParticipants();
-        setParticipants(updated);
+        console.log(`[Admin] Exclusão confirmada pelo servidor para ID: ${id}`);
+        // Optimistic remove is enough, we don't need to refetch immediately 
+        // which might trigger a race condition if Supabase hasn't fully propagated the delete
+        setParticipants(prev => prev.filter(p => p.id !== id));
       } else {
+        console.error(`[Admin] Erro ao excluir: ${res.message}`, res);
         alert(res.message || 'Erro ao excluir');
       }
     }
@@ -419,6 +432,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
     m.phone.includes(searchTerm)
   );
 
+  const handleRunReminders = async () => {
+    setIsProcessingReminders(true);
+    try {
+      const results = await processReminders();
+      alert(`Processamento finalizado!\nLembretes de Jejum: ${results.fastingReminders}\nLembretes de Oração: ${results.prayerReminders}\nErros: ${results.errors.length}`);
+
+      // Atualizar logs
+      const { data: logs } = await supabase
+        .from('reminder_logs')
+        .select('*, members(name, phone)')
+        .order('sent_at', { ascending: false })
+        .limit(50);
+      setReminderLogs(logs || []);
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao processar lembretes.');
+    } finally {
+      setIsProcessingReminders(false);
+    }
+  };
+
   return (
     <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden min-h-[700px] flex flex-col transition-all border border-white/20 dark:border-slate-700">
       {/* Admin Header - Premium Gradient */}
@@ -455,6 +489,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
             { id: 'prayer-clock', icon: <Clock size={16} />, label: 'Relógio' },
             { id: 'prayer-campaigns', icon: <List size={16} />, label: 'Campanhas' },
             { id: 'analytics', icon: <BarChart3 size={16} />, label: 'Estatísticas' },
+            { id: 'reminders', icon: <Activity size={16} />, label: 'Lembretes' },
             { id: 'settings', icon: <Settings size={16} />, label: 'Configurações' },
           ].map(tab => (
             <button
@@ -578,14 +613,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
                           </td>
                           <td className="px-8 py-5">
                             <div className="flex flex-wrap gap-2">
-                              {p.days.map((day, idx) => {
-                                const dayName = day.split(' – ')[0];
-                                return (
-                                  <span key={idx} className="bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 group-hover:border-indigo-200 dark:group-hover:border-indigo-800 transition-colors">
-                                    {dayName}
-                                  </span>
-                                );
-                              })}
+                              {p.days.length === settings.fastDays.length && settings.fastDays.length > 0 ? (
+                                <span className="bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                                  Semana Toda
+                                </span>
+                              ) : (
+                                p.days.map((day, idx) => {
+                                  const dayName = day.split(' – ')[0];
+                                  return (
+                                    <span key={idx} className="bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 group-hover:border-indigo-200 dark:group-hover:border-indigo-800 transition-colors">
+                                      {dayName}
+                                    </span>
+                                  );
+                                })
+                              )}
                             </div>
                           </td>
                           <td className="px-8 py-5">
@@ -800,6 +841,85 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
         {activeTab === 'prayer-clock' && (
           <div className="max-w-4xl mx-auto">
             <PrayerCampaignManager />
+          </div>
+        )}
+
+        {/* --- REMINDERS TAB --- */}
+        {activeTab === 'reminders' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div>
+                <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <Activity size={24} className="text-indigo-500" />
+                  Sistema de Lembretes Automáticos
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                  O sistema envia notificações às 20h da véspera (Jejum) e 30min antes (Oração).
+                </p>
+              </div>
+              <button
+                onClick={handleRunReminders}
+                disabled={isProcessingReminders}
+                className={`flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all active:scale-95 disabled:opacity-50 ${isProcessingReminders ? 'animate-pulse' : ''}`}
+              >
+                {isProcessingReminders ? <RefreshCw size={20} className="animate-spin" /> : <RefreshCw size={20} />}
+                {isProcessingReminders ? 'Processando...' : 'Processar Agora'}
+              </button>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
+                <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                  <List size={14} /> últimos Envios
+                </h4>
+                <span className="text-[10px] font-bold text-slate-400">Total: {reminderLogs.length} logs recentes</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-slate-900/30">
+                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Membro</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tipo</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Referência</th>
+                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Data Envio</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {reminderLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-20 text-center text-slate-400 text-sm italic">
+                          Nenhum lembrete enviado recentemente.
+                        </td>
+                      </tr>
+                    ) : (
+                      reminderLogs.map(log => (
+                        <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="font-bold text-slate-800 dark:text-slate-200 text-sm">{log.members?.name}</div>
+                            <div className="text-[10px] text-slate-500">{log.members?.phone}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${log.type === 'fasting'
+                                ? 'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800'
+                                : 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-800'
+                              }`}>
+                              {log.type === 'fasting' ? 'Jejum' : 'Oração'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                            {log.target_date}
+                          </td>
+                          <td className="px-6 py-4 text-right text-xs text-slate-500">
+                            {new Date(log.sent_at).toLocaleString('pt-BR')}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 

@@ -31,6 +31,7 @@ export const TYPE_DESCRIPTIONS: FastTypeDescription[] = [
     title: 'Opção 2 – Jejum de Daniel',
     color: 'border-blue-500 bg-blue-50 text-blue-800',
     description: [
+      { text: 'Início do Jejum (00h00)', detail: 'A consagração começa à meia-noite.' },
       { text: 'Legumes, verduras, frutas e grãos', detail: 'Alimente-se apenas de produtos da terra, evitando alimentos processados.' },
       { text: 'Água liberada', detail: 'Mantenha-se bem hidratado.' },
       { text: 'Sem carnes, doces, frituras ou industrializados', detail: 'Evite alimentos que despertam o prazer da carne para focar no Espírito.' }
@@ -64,7 +65,7 @@ export const TYPE_DESCRIPTIONS: FastTypeDescription[] = [
     color: 'border-purple-500 bg-purple-50 text-purple-800',
     description: [
       { text: 'Jejum total de 24 horas', detail: 'Abstenha-se de alimentos sólidos por um ciclo completo de 24h.' },
-      { text: 'Início e término flexíveis', detail: 'Comece às 18h ou 19h e entregue no mesmo horário do dia seguinte.' },
+      { text: 'Início do Jejum (18h ou 19h)', detail: 'Flexível: comece em um destes horários e entregue no dia seguinte.' },
       { text: 'Foco em Busca Espiritual', detail: 'Tempo dedicado à oração intensa, leitura bíblica e silêncio.' },
       { text: 'Água e líquidos claros liberados', detail: 'Mantenha a hidratação com água, chá ou café sem açúcar.' }
     ]

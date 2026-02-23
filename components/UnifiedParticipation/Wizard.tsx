@@ -6,6 +6,8 @@ import { StepClock } from './StepClock';
 import { StepSuccess } from './StepSuccess';
 import { ChevronLeft, X } from 'lucide-react';
 
+import { StepClockUpsell } from './StepClockUpsell';
+
 export function Wizard({ onExit }: { onExit: () => void }) {
     const { step, setStep, loading, config, setJustSaved } = useParticipation();
 
@@ -23,7 +25,7 @@ export function Wizard({ onExit }: { onExit: () => void }) {
             {/* Wizard Header */}
             <header className="p-4 flex items-center justify-between backdrop-blur-md bg-white/5 sticky top-0 z-50 border-b border-white/10">
                 <div className="flex items-center gap-2">
-                    {step > 0 && step < 3 && (
+                    {step > 0 && step < 4 && (
                         <button onClick={() => setStep(step - 1)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                             <ChevronLeft size={24} />
                         </button>
@@ -32,7 +34,7 @@ export function Wizard({ onExit }: { onExit: () => void }) {
                 </div>
                 <div className="flex gap-4 items-center">
                     <div className="flex gap-1">
-                        {[0, 1, 2, 3].map(i => (
+                        {[0, 1, 2, 3, 4].map(i => (
                             <div key={i} className={`h-1.5 w-8 rounded-full transition-all duration-500 ${i <= step ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-white/10'}`} />
                         ))}
                     </div>
@@ -46,8 +48,9 @@ export function Wizard({ onExit }: { onExit: () => void }) {
             <main className="flex-1 flex flex-col p-4 max-w-lg mx-auto w-full justify-center">
                 {step === 0 && <StepAuth />}
                 {step === 1 && <StepFasting />}
-                {step === 2 && <StepClock />}
-                {step === 3 && <StepSuccess onFinish={onExit} />}
+                {step === 2 && <StepClockUpsell />}
+                {step === 3 && <StepClock />}
+                {step === 4 && <StepSuccess onFinish={onExit} />}
             </main>
         </div>
     );

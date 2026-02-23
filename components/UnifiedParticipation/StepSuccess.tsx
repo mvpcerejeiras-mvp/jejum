@@ -101,15 +101,78 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
         }
 
         const timeLabel = fastingData?.time;
+        const isOption5 = fastingData?.type === FastType.DEEP_SEARCH;
+
+        // Helper function to get date for day name
+        const getDayDate = (dayFullName: string) => {
+            const dayName = dayFullName.split('–')[0].trim().split(' ')[0]; // Handle "Segunda-feira" or just first word
+            const dayMap: { [key: string]: number } = {
+                'Domingo': 0, 'Segunda-feira': 1, 'Terça-feira': 2, 'Quarta-feira': 3,
+                'Quinta-feira': 4, 'Sexta-feira': 5, 'Sábado': 6
+            };
+            const targetDay = dayMap[dayName];
+            if (targetDay === undefined) return null;
+
+            const now = new Date();
+            const currentDay = now.getDay();
+            let daysUntil = (targetDay - currentDay + 7) % 7;
+
+            const targetDate = new Date();
+            targetDate.setDate(now.getDate() + daysUntil);
+            return targetDate;
+        };
+
+        const formatDate = (date: Date | null) => {
+            if (!date) return "";
+            return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        };
 
         let text = `*Graça e paz ${firstName}!*\n\n`;
         text += `✅ Seu Propósito de ${propulsion} foi Confirmado!\n\n`;
         text += `Que Deus abençoe sua consagração 🙏🔥\n\n`;
 
         if (hasFasting) {
-            const dayNames = fastingData.days.map((d: string) => d.split('–')[0].trim()).join(', ');
-            text += `🗓 *Jejum –* ${dayNames}\n`;
-            text += `⏰ Início da alimentação: ${timeLabel} - "${typeInfo?.title || fastingData.type}"\n\n`;
+            const allDaysSelected = fastingData.days.length === appSettings.fastDays.length && appSettings.fastDays.length > 1;
+
+            let dayStringsWithDates = "";
+
+            if (allDaysSelected) {
+                dayStringsWithDates = "Semana toda de Jejum (Segunda a Sexta)";
+            } else {
+                // Sort days based on their index in the week to keep it organized
+                const dayOrder: { [key: string]: number } = {
+                    'Segunda-feira': 1, 'Terça-feira': 2, 'Quarta-feira': 3,
+                    'Quinta-feira': 4, 'Sexta-feira': 5, 'Sábado': 6, 'Domingo': 7
+                };
+
+                const sortedDays = [...fastingData.days].sort((a, b) => {
+                    const nameA = a.split('–')[0].trim();
+                    const nameB = b.split('–')[0].trim();
+                    return (dayOrder[nameA] || 99) - (dayOrder[nameB] || 99);
+                });
+
+                dayStringsWithDates = sortedDays.map((d: string) => {
+                    const date = getDayDate(d);
+                    const name = d.split('–')[0].trim();
+                    return date ? `${name} (${formatDate(date)})` : name;
+                }).join(', ');
+            }
+
+            text += `🗓 *Jejum –* ${dayStringsWithDates}\n`;
+            text += `🚀 *${typeInfo?.title || fastingData.type}*\n\n`;
+
+            if (isOption5) {
+                const firstDate = getDayDate(fastingData.days[0]);
+                const deliveryDate = firstDate ? new Date(firstDate) : null;
+                if (deliveryDate) deliveryDate.setDate(deliveryDate.getDate() + 1);
+
+                text += `⏰ *Início do Jejum:* ${formatDate(firstDate)} às 18h ou 19h\n`;
+                text += `🏁 *Entrega do Jejum:* ${formatDate(deliveryDate)} às 18h ou 19h (24h depois)\n\n`;
+            } else {
+                const firstDate = getDayDate(fastingData.days[0]);
+                text += `⏰ *Início do Jejum:* ${formatDate(firstDate)} às 00h00\n`;
+                text += `🏁 *Entrega do Jejum:* ${formatDate(firstDate)} às ${timeLabel}\n\n`;
+            }
 
             if (detailText) {
                 text += `*Detalhes do Jejum:*\n${detailText}\n\n`;

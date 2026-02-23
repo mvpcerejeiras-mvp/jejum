@@ -11,7 +11,6 @@ export function StepClock() {
 
     const initialSlots = participationData?.prayer?.map((s: any) => s.slot_number) || [];
     const [selectedSlots, setSelectedSlots] = useState<number[]>(initialSlots);
-    const [mode, setMode] = useState<'intro' | 'selection'>(initialSlots.length > 0 ? 'selection' : 'intro');
 
     useEffect(() => {
         loadCampaign();
@@ -44,12 +43,12 @@ export function StepClock() {
             campaignId: activeCampaign.id,
             slotNumbers: selectedSlots
         });
-        setStep(3);
+        setStep(4);
     };
 
     const handleSkip = () => {
         setClockData(null);
-        setStep(3);
+        setStep(4);
     };
 
     if (loading) return <div className="text-white text-center py-10">Carregando horários...</div>;
@@ -72,61 +71,61 @@ export function StepClock() {
     const getSlotCount = (slot: number) => signups.filter(s => s.slotNumber === slot).length;
     const slots = Array.from({ length: activeCampaign.duration }, (_, i) => i);
 
-    if (mode === 'intro') {
-        return (
-            <div className="animate-fade-in-up space-y-8 py-10 text-center">
-                <div className="relative inline-block">
-                    <div className="absolute inset-0 bg-indigo-500 blur-2xl opacity-30 animate-pulse"></div>
-                    <div className="relative w-24 h-24 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-full flex items-center justify-center mx-auto shadow-2xl border-4 border-white/10">
-                        <Flame size={48} className="text-white animate-bounce" />
-                    </div>
-                </div>
-                <div className="space-y-4 max-w-sm mx-auto">
-                    <h2 className="text-3xl font-bold text-white leading-tight">Você pode assumir um turno de oração?</h2>
-                    <p className="text-slate-300 text-lg leading-relaxed">
-                        Serão <strong className="text-indigo-400">{activeCampaign.duration} horas</strong> de intercessão. Escolha turnos para clamar e fortalecer a igreja em oração.
-                    </p>
-                </div>
-                <div className="grid grid-cols-1 gap-4 max-w-xs mx-auto pt-4">
-                    <button onClick={() => setMode('selection')} className="w-full py-4 px-6 bg-white text-indigo-900 font-extrabold rounded-2xl shadow-xl hover:bg-indigo-50 transition-all text-lg flex items-center justify-center gap-2">🙌 Quero meu turno</button>
-                    <button onClick={handleSkip} className="w-full py-3 px-6 text-slate-400 font-medium hover:text-white transition-colors">Ficarei somente no jejum</button>
-                </div>
-            </div>
-        );
+    const countsBySlot = slots.map(slot => getSlotCount(slot));
+    const minCount = countsBySlot.length > 0 ? Math.min(...countsBySlot) : 0;
+
+    let currentLimit = 5;
+    if (minCount >= 5) {
+        currentLimit = 5 + 3 * (Math.floor((minCount - 5) / 3) + 1);
     }
 
     return (
         <div className="animate-fade-in-up space-y-6 pb-24">
-            <div className="text-center">
-                <div className="inline-block p-3 bg-indigo-500/20 rounded-full mb-2">
+            <div className="text-center space-y-2">
+                <div className="inline-block p-3 bg-indigo-500/20 rounded-full mb-1">
                     <Clock className="text-indigo-400" size={32} />
                 </div>
-                <h2 className="text-2xl font-bold text-white">{appSettings?.prayerClockTitle || 'Relógio de Oração'}</h2>
-                <p className="text-slate-300">Escolha seus horários de intercessão.</p>
+                <div>
+                    <h2 className="text-2xl font-bold text-white">{appSettings?.prayerClockTitle || 'Relógio de Oração'} ({new Date(activeCampaign?.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})</h2>
+                    <div className="flex items-center justify-center gap-2 mt-1">
+                        <span className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 rounded-full text-xs font-bold text-indigo-300 flex items-center gap-1.5 transition-all">
+                            <Users size={12} />
+                            Meta Atual: {currentLimit} pessoas por hora
+                        </span>
+                    </div>
+                </div>
+                <p className="text-slate-400 text-sm px-4">
+                    {minCount < currentLimit - 3
+                        ? "Preencha todos os horários para liberar mais vagas!"
+                        : "Meta próxima! Vamos fechar todos os horários."}
+                </p>
             </div>
-            <div className="grid grid-cols-3 gap-2 max-h-[50vh] overflow-y-auto pr-1">
+
+            <div className="grid grid-cols-3 gap-2 max-h-[45vh] overflow-y-auto pr-1">
                 {slots.map(slot => {
                     const isSelected = selectedSlots.includes(slot);
                     const count = getSlotCount(slot);
-                    const isFull = count >= 10;
+                    const isFull = count >= currentLimit;
                     return (
                         <button
                             key={slot}
-                            disabled={isFull}
+                            disabled={isSelected ? false : isFull}
                             onClick={() => handleSlotClick(slot)}
-                            className={`relative p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300'} ${isFull ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`relative p-3 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300'} ${isFull && !isSelected ? 'opacity-40 cursor-not-allowed grayscale' : ''}`}
                         >
                             <span className="text-lg font-bold">{getSlotTime(slot)}</span>
-                            <div className="flex items-center gap-1 text-xs opacity-70"><Users size={10} /> {count}</div>
+                            <div className="flex items-center gap-1 text-xs opacity-70">
+                                <Users size={10} />
+                                <span className={count >= currentLimit ? 'text-indigo-300 font-bold' : ''}>{count}</span>
+                            </div>
                         </button>
                     );
                 })}
             </div>
             <div className="fixed bottom-0 left-0 right-0 p-4 bg-gray-900/90 backdrop-blur-sm z-50">
                 <div className="max-w-lg mx-auto flex gap-3">
-                    <button onClick={() => setMode('intro')} className="px-4 py-4 bg-slate-800 text-slate-300 rounded-xl"><ArrowLeft size={20} /></button>
-                    <button onClick={handleSkip} className="px-4 py-4 text-slate-400">Pular</button>
-                    <button onClick={handleNext} disabled={selectedSlots.length === 0} className="flex-1 bg-white text-indigo-900 font-bold py-4 rounded-xl disabled:opacity-50">Confirmar <ArrowRight size={20} /></button>
+                    <button onClick={() => setStep(2)} className="px-4 py-4 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors"><ArrowLeft size={20} /></button>
+                    <button onClick={handleNext} disabled={selectedSlots.length === 0} className="flex-1 bg-white text-indigo-900 font-bold py-4 rounded-xl shadow-lg hover:bg-slate-100 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">Confirmar <ArrowRight size={20} /></button>
                 </div>
             </div>
         </div>
