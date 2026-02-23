@@ -105,9 +105,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
       if (signups && signups.length > 0) {
         prayerInfo = "\n\n🕗 *Relógio de Oração (08/03)*";
         signups.forEach(s => {
-          // Calcular a hora exata baseada no slot_number e na hora de início (06:00)
-          const hour = (6 + s.slot_number).toString().padStart(2, '0');
-          prayerInfo += `\n${hour}:00 – Intercessão na igreja`;
+          // Calcular a hora exata baseada no start_date da campanha e no slot_number
+          const campaign = Array.isArray(s.campaign) ? s.campaign[0] : s.campaign;
+          if (campaign && campaign.start_date) {
+            const baseDate = new Date(campaign.start_date);
+            baseDate.setHours(baseDate.getHours() + s.slot_number);
+            const hour = baseDate.getHours().toString().padStart(2, '0');
+            prayerInfo += `\n${hour}:00 – Intercessão na igreja`;
+          }
         });
       }
     }
