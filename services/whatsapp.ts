@@ -1,7 +1,7 @@
 
-const ZAPI_INSTANCE = "3EE7F9BBDFF3F155E45CFE9C8F58AF1C";
-const ZAPI_TOKEN = "DF5749F6CDD891E19ED684E9";
-const SECURITY_TOKEN = "F00812244ef824e12b7faa33658278319S";
+const ZAPI_INSTANCE = import.meta.env.VITE_ZAPI_INSTANCE;
+const ZAPI_TOKEN = import.meta.env.VITE_ZAPI_TOKEN;
+const SECURITY_TOKEN = import.meta.env.VITE_ZAPI_SECURITY_TOKEN;
 const ZAPI_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE}/token/${ZAPI_TOKEN}/send-text`;
 
 /**

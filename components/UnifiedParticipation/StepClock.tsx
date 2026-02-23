@@ -1,13 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useParticipation } from '../../contexts/ParticipationContext';
 import { getPrayerCampaigns, getPrayerSignups } from '../../services/db';
-import { ArrowLeft, ArrowRight, Clock, Users, Flame } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Users, Flame } from 'lucide-react';
 
 export function StepClock() {
     const { setStep, setClockData, participationData, appSettings, isAdmin } = useParticipation() as any;
     const [activeCampaign, setActiveCampaign] = useState<any>(null);
     const [signups, setSignups] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [timeLeft, setTimeLeft] = useState({ d: 0, h: 0, m: 0, s: 0 });
+
+    useEffect(() => {
+        if (!activeCampaign?.startDate) return;
+
+        const timer = setInterval(() => {
+            const start = new Date(activeCampaign.startDate).getTime();
+            const now = new Date().getTime();
+            const diff = start - now;
+
+            if (diff <= 0) {
+                setTimeLeft({ d: 0, h: 0, m: 0, s: 0 });
+                clearInterval(timer);
+                return;
+            }
+
+            setTimeLeft({
+                d: Math.floor(diff / (1000 * 60 * 60 * 24)),
+                h: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+                m: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+                s: Math.floor((diff % (1000 * 60)) / 1000)
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [activeCampaign?.startDate]);
 
     const initialSlots = participationData?.prayer?.map((s: any) => s.slot_number) || [];
     const [selectedSlots, setSelectedSlots] = useState<number[]>(initialSlots);
@@ -88,24 +114,47 @@ export function StepClock() {
     }
 
     return (
-        <div className="animate-fade-in-up space-y-6 pb-24">
-            <div className="text-center space-y-2">
-                <div className="inline-block p-3 bg-indigo-500/20 rounded-full mb-1">
-                    <Clock className="text-indigo-400" size={32} />
+        <div className="animate-fade-in-up space-y-8 pb-24">
+            <div className="text-center space-y-4">
+                {/* Countdown Display */}
+                <div className="flex justify-center gap-2 md:gap-3 mb-4">
+                    {[
+                        { label: 'dias', value: timeLeft.d },
+                        { label: 'horas', value: timeLeft.h },
+                        { label: 'min', value: timeLeft.m },
+                        { label: 'seg', value: timeLeft.s }
+                    ].map((item, i) => (
+                        <div key={i} className="flex flex-col items-center">
+                            <div className="w-12 h-14 md:w-16 md:h-16 bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-md rounded-2xl border border-white/10 flex items-center justify-center shadow-xl group hover:border-indigo-500/50 transition-colors">
+                                <span className={`text-xl md:text-2xl font-black ${item.value > 0 || i === 3 ? 'text-white' : 'text-slate-600'}`}>
+                                    {String(item.value).padStart(2, '0')}
+                                </span>
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-tighter text-slate-500 mt-2">{item.label}</span>
+                        </div>
+                    ))}
                 </div>
+
                 <div>
-                    <h2 className="text-2xl font-bold text-white">{appSettings?.prayerClockTitle || 'Relógio de Oração'} ({new Date(activeCampaign?.startDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})</h2>
-                    <div className="flex items-center justify-center gap-2 mt-1">
-                        <span className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/30 rounded-full text-xs font-bold text-indigo-300 flex items-center gap-1.5 transition-all">
-                            <Users size={12} />
-                            Meta Atual: {currentLimit} pessoas por hora
+                    <h2 className="text-3xl font-black text-white tracking-tight leading-tight">
+                        {appSettings?.prayerClockTitle?.includes('(')
+                            ? appSettings.prayerClockTitle
+                            : `${appSettings?.prayerClockTitle || 'Relógio de Oração'}`}
+                    </h2>
+                    <p className="text-indigo-300/80 text-sm font-bold mt-1">
+                        {new Date(activeCampaign?.startDate).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}
+                    </p>
+                    <div className="flex items-center justify-center gap-2 mt-4">
+                        <span className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-indigo-300 flex items-center gap-2 shadow-lg backdrop-blur-sm">
+                            <Users size={12} className="text-indigo-500" />
+                            Meta: {currentLimit} pessoas / hora
                         </span>
                     </div>
                 </div>
-                <p className="text-slate-400 text-sm px-4">
+                <p className="text-slate-400 text-xs font-medium px-8 leading-relaxed max-w-sm mx-auto">
                     {minCount < currentLimit - 3
-                        ? "Preencha todos os horários para liberar mais vagas!"
-                        : "Meta próxima! Vamos fechar todos os horários."}
+                        ? "Preencha todos os horários para liberarmos novas vagas!"
+                        : "Estamos quase lá! Vamos fechar todos os horários."}
                 </p>
             </div>
 

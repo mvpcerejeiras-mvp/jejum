@@ -117,35 +117,47 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ onJoin, onViewSchedule, o
             <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Termômetro da Semana</h3>
           </div>
 
-          <div className="flex items-end justify-between gap-2 h-40 pt-4 overflow-x-auto pb-2 px-1">
+          <div className="flex items-end justify-between gap-3 h-48 pt-10 overflow-x-auto pb-4 px-2 scrollbar-hide">
             {dayCounts.map((data, idx) => {
-              const heightPercent = (data.count / maxDayCount) * 100;
+              const heightPercent = (data.count / maxDayCount) * 85; // Reduzido para dar espaço ao número
               const isToday = new Date().getDay() === (idx + 1);
 
               return (
-                <div key={idx} className="flex flex-col items-center justify-end flex-1 min-w-[30px] group h-full relative">
+                <div key={idx} className="flex flex-col items-center justify-end flex-1 min-w-[45px] group h-full relative">
                   {/* Tooltip */}
-                  <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 dark:bg-slate-700 text-white text-xs py-1 px-2 rounded pointer-events-none whitespace-nowrap z-20 mb-1 border border-transparent dark:border-slate-600">
+                  <div className="absolute -top-4 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 bg-slate-800 dark:bg-slate-700 text-white text-[10px] py-1 px-2 rounded-lg pointer-events-none whitespace-nowrap z-30 shadow-xl border border-white/10">
                     {data.fullLabel}: {data.count}
                   </div>
 
-                  {/* Bar */}
-                  <div className="w-full h-full flex items-end justify-center rounded-t-lg bg-slate-50 dark:bg-slate-700/50 overflow-hidden relative transition-colors">
+                  {/* Bar Container */}
+                  <div className="w-full h-full flex items-end justify-center relative transition-colors">
+                    {/* Background track */}
+                    <div className="absolute inset-0 w-full bg-slate-100/50 dark:bg-slate-700/30 rounded-xl -z-10"></div>
+
+                    {/* Actual Bar */}
                     <div
-                      className={`w-full max-w-[40px] rounded-t-lg transition-all duration-1000 ease-out relative ${isToday ? 'bg-indigo-500 dark:bg-indigo-400' : 'bg-indigo-300 dark:bg-indigo-600/50'
-                        } group-hover:bg-indigo-600 dark:group-hover:bg-indigo-500`}
+                      className={`w-full max-w-[32px] rounded-xl transition-all duration-1000 ease-out relative shadow-sm group-hover:shadow-indigo-500/20
+                        ${isToday
+                          ? 'bg-gradient-to-t from-indigo-600 to-indigo-400 dark:from-indigo-500 dark:to-indigo-300'
+                          : 'bg-gradient-to-t from-slate-400 to-slate-300 dark:from-slate-600 dark:to-slate-500'
+                        } group-hover:from-indigo-500 group-hover:to-indigo-300`}
                       style={{ height: animateBars ? `${heightPercent}%` : '0%' }}
                     >
-                      {data.count > 0 && (
-                        <span className="absolute -top-5 left-1/2 transform -translate-x-1/2 text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                      {/* Floating Number Label */}
+                      <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 flex flex-col items-center">
+                        <span className={`text-[11px] font-black transition-colors ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}>
                           {data.count}
                         </span>
-                      )}
+                        <div className={`w-1 h-1 rounded-full mt-1 ${isToday ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}></div>
+                      </div>
+
+                      {/* Glass Shine Effect */}
+                      <div className="absolute inset-0 bg-white/10 w-1/2 rounded-l-xl pointer-events-none"></div>
                     </div>
                   </div>
 
-                  {/* Label */}
-                  <div className={`mt-2 text-[10px] md:text-xs font-bold uppercase tracking-wide truncate max-w-[40px] text-center ${isToday ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                  {/* Day Label */}
+                  <div className={`mt-3 text-[10px] md:text-xs font-black uppercase tracking-widest text-center transition-all ${isToday ? 'text-indigo-600 dark:text-indigo-400 scale-110' : 'text-slate-400 dark:text-slate-500'}`}>
                     {data.shortLabel}
                   </div>
                 </div>
