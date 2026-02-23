@@ -11,6 +11,7 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
     const [saving, setSaving] = useState(true);
     const [error, setError] = useState('');
     const [savedSlots, setSavedSlots] = useState<string[]>([]);
+    const [campaignDate, setCampaignDate] = useState<Date | null>(null);
     const hasSavedRef = React.useRef(false);
 
     useEffect(() => {
@@ -47,6 +48,7 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
                 const campaign = campaigns.find((c: any) => c.id === clockData.campaignId);
 
                 if (campaign) {
+                    setCampaignDate(new Date(campaign.startDate));
                     slots.sort((a, b) => a - b).forEach(slot => {
                         const date = new Date(campaign.startDate);
                         date.setHours(date.getHours() + slot);
@@ -56,17 +58,31 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
                     setSavedSlots(slotTimeStrings);
                     currentSlotTimes = slotTimeStrings;
                     slotsSavedCount = slots.length;
+                } else {
+                    // Fallback to active campaign if clockData doesn't find it
+                    const active = campaigns.find((c: any) => c.isActive);
+                    if (active) setCampaignDate(new Date(active.startDate));
                 }
 
                 await clearPrayerSignups(clockData.campaignId, user.id);
                 const promises = slots.map(slot => addPrayerSignup(clockData.campaignId, user.id, slot));
                 await Promise.all(promises);
+            } else {
+                // No clock data, but let's try to get campaign date for fasting dates accuracy
+                const campaigns = await getPrayerCampaigns();
+                const active = campaigns.find((c: any) => c.isActive);
+                if (active) setCampaignDate(new Date(active.startDate));
             }
 
             // 3. Automate WhatsApp Message (Z-API) - ONLY if it's a fresh save
             if (justSaved) {
                 try {
-                    const rawMessage = decodeURIComponent(getWhatsAppMessage(slotsSavedCount > 0, currentSlotTimes));
+                    // We need to wait a tiny bit for campaignDate to be available or fetch it directly here
+                    const campaigns = await getPrayerCampaigns();
+                    const active = campaigns.find((c: any) => c.isActive);
+                    const refDate = active ? new Date(active.startDate) : null;
+
+                    const rawMessage = decodeURIComponent(getWhatsAppMessage(slotsSavedCount > 0, currentSlotTimes, refDate));
                     await sendWhatsAppMessage(user.phone, rawMessage);
                     // Mark as processed so reload doesn't resend
                     setJustSaved(false);
@@ -81,7 +97,7 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
         saveData();
     }, []);
 
-    const getWhatsAppMessage = (hasPrayer: boolean, overrideSlots?: string[]) => {
+    const getWhatsAppMessage = (hasPrayer: boolean, overrideSlots?: string[], refDate?: Date | null) => {
         const firstName = user?.name ? user.name.split(' ')[0] : 'Irmão(ã)';
         const hasFasting = fastingData && fastingData.days && fastingData.days.length > 0;
 
@@ -105,7 +121,7 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
 
         // Helper function to get date for day name
         const getDayDate = (dayFullName: string) => {
-            const dayName = dayFullName.split('–')[0].trim().split(' ')[0]; // Handle "Segunda-feira" or just first word
+            const dayName = dayFullName.split('–')[0].trim();
             const dayMap: { [key: string]: number } = {
                 'Domingo': 0, 'Segunda-feira': 1, 'Terça-feira': 2, 'Quarta-feira': 3,
                 'Quinta-feira': 4, 'Sexta-feira': 5, 'Sábado': 6
@@ -113,12 +129,21 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
             const targetDay = dayMap[dayName];
             if (targetDay === undefined) return null;
 
-            const now = new Date();
-            const currentDay = now.getDay();
-            let daysUntil = (targetDay - currentDay + 7) % 7;
+            // Use the campaign date as reference. 
+            // If refDate is 08/03 (Sunday), we want the dates of THAT week (Starting Mon 02/03).
+            const base = refDate ? new Date(refDate) : new Date();
 
-            const targetDate = new Date();
-            targetDate.setDate(now.getDate() + daysUntil);
+            // Find the Monday of the week of the base date
+            const dayOfBase = base.getDay();
+            const diffToMonday = (dayOfBase === 0 ? -6 : 1 - dayOfBase);
+            const mondayOfWeek = new Date(base);
+            mondayOfWeek.setDate(base.getDate() + diffToMonday);
+
+            const targetDate = new Date(mondayOfWeek);
+            // If it's Sunday, it's 6 days after Monday
+            const offset = (targetDay === 0 ? 6 : targetDay - 1);
+            targetDate.setDate(mondayOfWeek.getDate() + offset);
+
             return targetDate;
         };
 

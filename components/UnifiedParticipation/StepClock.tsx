@@ -34,6 +34,14 @@ export function StepClock() {
     };
 
     const handleSlotClick = (slot: number) => {
+        const count = getSlotCount(slot);
+        const isFull = count >= currentLimit;
+
+        if (isFull && !isAdmin && !selectedSlots.includes(slot)) {
+            alert("Este horário já atingiu o limite de vagas. Por favor, escolha outro horário disponível!");
+            return;
+        }
+
         setSelectedSlots(prev => prev.includes(slot) ? prev.filter(s => s !== slot) : [...prev, slot]);
     };
 
@@ -121,11 +129,10 @@ export function StepClock() {
                     return (
                         <button
                             key={slot}
-                            disabled={isSelected ? false : (isFull && !isAdmin)}
                             onClick={() => handleSlotClick(slot)}
-                            className={`relative p-3 pt-4 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800/50 border-slate-700 text-slate-300'} ${isFull && !isSelected && !isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`relative p-3 pt-4 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-800/50 border-slate-700 text-slate-300'} ${isFull && !isSelected && !isAdmin ? 'border-red-900/30' : ''}`}
                         >
-                            <span className={`absolute top-1.5 text-[9px] font-black uppercase tracking-wider ${isSelected ? 'text-indigo-100' : statusColor}`}>
+                            <span className={`absolute top-1.5 text-[9px] font-black uppercase tracking-wider ${isSelected ? 'text-indigo-200' : statusColor}`}>
                                 {statusLabel}
                             </span>
                             <span className="text-lg font-bold">{getSlotTime(slot)}</span>
