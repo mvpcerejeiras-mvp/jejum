@@ -130,15 +130,25 @@ export function StepClock() {
                         <button
                             key={slot}
                             onClick={() => handleSlotClick(slot)}
-                            className={`relative p-3 pt-4 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isSelected ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-slate-800/50 border-slate-700 text-slate-300'} ${isFull && !isSelected && !isAdmin ? 'border-red-900/30' : ''}`}
+                            className={`relative p-3 pt-4 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all 
+                                ${isFull
+                                    ? (isSelected
+                                        ? 'bg-red-600 border-red-500 text-white shadow-lg shadow-red-500/40 scale-[1.02] z-10 ring-2 ring-red-500/50'
+                                        : 'bg-red-500/10 border-red-500/40 text-red-200')
+                                    : isSelected
+                                        ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-[1.02] z-10'
+                                        : isNearFull
+                                            ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
+                                            : 'bg-slate-800/50 border-slate-700 text-slate-300 hover:border-slate-500'
+                                }`}
                         >
-                            <span className={`absolute top-1.5 text-[9px] font-black uppercase tracking-wider ${isSelected ? 'text-indigo-200' : statusColor}`}>
+                            <span className={`absolute top-1.5 text-[9px] font-black uppercase tracking-wider ${isSelected ? (isFull ? 'text-red-100' : 'text-indigo-100') : statusColor}`}>
                                 {statusLabel}
                             </span>
                             <span className="text-lg font-bold">{getSlotTime(slot)}</span>
                             <div className="flex items-center gap-1 text-xs opacity-70">
                                 <Users size={10} />
-                                <span className={count >= currentLimit ? 'text-indigo-300 font-bold' : ''}>{count}</span>
+                                <span className={isSelected ? 'text-white' : isFull ? 'text-red-500 font-bold' : isNearFull ? 'text-amber-400' : ''}>{count}</span>
                             </div>
                         </button>
                     );

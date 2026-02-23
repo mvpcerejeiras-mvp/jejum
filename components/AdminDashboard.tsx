@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PrayerCampaignManager } from './PrayerCampaignManager';
 import { getParticipants, getSettings, saveSettings, uploadLogo, updateParticipant, deleteParticipant, getMembers, saveMember, updateMember, deleteMember, migrateParticipantsToMembers, deleteAllMembers, archiveCurrentFast, getMemberHistory, getSystemConfig, saveSystemConfig } from '../services/db';
 import { Participant, AppSettings, FastTime, Member, FastingHistory, SystemConfig } from '../types';
-import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical, Pencil, Trash, X, RefreshCw, Archive, History, Sparkles, MessageCircle } from 'lucide-react';
+import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical, Pencil, Trash, X, RefreshCw, Archive, History, Sparkles, MessageCircle, Share2 } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { processReminders } from '../services/reminders';
 import { sendWhatsAppMessage } from '../services/whatsapp';
@@ -31,6 +31,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
   const [settings, setSettings] = useState<AppSettings>({ theme: '', instruction: '', appTitle: '', logoId: '', fastDays: [] });
   const [reminderLogs, setReminderLogs] = useState<any[]>([]);
   const [isProcessingReminders, setIsProcessingReminders] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewMessage, setPreviewMessage] = useState('');
+  const [previewRecipient, setPreviewRecipient] = useState<Participant | null>(null);
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
 
   // Filters
   const [filterDay, setFilterDay] = useState('');
@@ -150,9 +154,23 @@ ${details}${prayerInfo}
 
 Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
 
-    const res = await sendWhatsAppMessage(p.phone, msg);
+    setPreviewMessage(msg);
+    setPreviewRecipient(p);
+    setIsPreviewModalOpen(true);
+  };
+
+  const confirmSendWhatsApp = async () => {
+    if (!previewRecipient || !previewMessage) return;
+
+    setIsSendingWhatsApp(true);
+    const res = await sendWhatsAppMessage(previewRecipient.phone, previewMessage);
+    setIsSendingWhatsApp(false);
+
     if (res.success) {
-      alert(`Mensagem enviada com sucesso para ${firstName}!`);
+      alert(`Mensagem enviada com sucesso!`);
+      setIsPreviewModalOpen(false);
+      setPreviewRecipient(null);
+      setPreviewMessage('');
     } else {
       alert(`Erro ao enviar: ${res.message}`);
     }
@@ -1417,6 +1435,78 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700"
               >
                 Salvar Alterações
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Preview Modal */}
+      {isPreviewModalOpen && previewRecipient && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 dark:border-slate-700 animate-in zoom-in-95 duration-300">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                    <MessageCircle size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black tracking-tight">Revisar Mensagem</h3>
+                    <p className="text-green-100 text-xs font-bold uppercase tracking-widest opacity-80">WhatsApp para {previewRecipient.name.split(' ')[0]}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <label className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Conteúdo da Mensagem</label>
+                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md">
+                  {previewRecipient.phone}
+                </span>
+              </div>
+
+              <textarea
+                className="w-full h-80 p-4 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 bg-slate-50 dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 text-sm outline-none transition-all resize-none font-medium leading-relaxed scrollbar-hide"
+                value={previewMessage}
+                onChange={(e) => setPreviewMessage(e.target.value)}
+                placeholder="Digite sua mensagem aqui..."
+              />
+
+              <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500 px-1 italic">
+                <Sparkles size={12} className="text-green-500" />
+                <span>Você pode editar o texto acima antes de enviar.</span>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex gap-3">
+              <button
+                onClick={() => setIsPreviewModalOpen(false)}
+                className="flex-1 px-6 py-3 text-slate-600 dark:text-slate-400 font-bold text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all active:scale-95"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmSendWhatsApp}
+                disabled={isSendingWhatsApp}
+                className="flex-3 px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
+              >
+                {isSendingWhatsApp ? (
+                  <RefreshCw size={18} className="animate-spin" />
+                ) : (
+                  <Share2 size={18} />
+                )}
+                {isSendingWhatsApp ? 'Enviando...' : 'Enviar Agora'}
               </button>
             </div>
           </div>
