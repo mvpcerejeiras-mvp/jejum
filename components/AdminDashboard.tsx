@@ -43,6 +43,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
 
   // Analytics State
   const [typeChartMode, setTypeChartMode] = useState<'bar' | 'pie'>('bar');
+  const [activePrayerCampaign, setActivePrayerCampaign] = useState<any>(null);
+  const [prayerSignups, setPrayerSignups] = useState<any[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -61,6 +63,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
         .order('sent_at', { ascending: false })
         .limit(50);
       setReminderLogs(logs || []);
+
+      // Fetch Prayer Analytics Data
+      const { data: campaigns } = await supabase
+        .from('prayer_campaigns')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (campaigns && campaigns.length > 0) {
+        const campaign = campaigns[0];
+        setActivePrayerCampaign(campaign);
+        const { data: signups } = await supabase
+          .from('prayer_signups')
+          .select('*')
+          .eq('campaign_id', campaign.id);
+        setPrayerSignups(signups || []);
+      }
     };
     loadData();
   }, [onSettingsChange]); // Reload when settings change trigger happens (e.g. parent refresh, though here we trigger parent)
@@ -311,27 +331,27 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
   const maxTimeCount = Math.max(...timeCounts.map(([_, c]) => c), 1);
   const maxTypeCount = Math.max(...typeCounts.map(([_, c]) => c), 1);
 
-  const getDayLabel = (day: string) => day.split(' – ')[0]; // Extract just "Segunda-feira"
-
-  const getTypeColor = (typeId: string) => {
-    const desc = TYPE_DESCRIPTIONS.find(t => t.id === typeId);
-    if (!desc) return 'bg-slate-500';
-    if (desc.color.includes('green')) return 'bg-green-500';
-    if (desc.color.includes('blue')) return 'bg-blue-500';
-    if (desc.color.includes('orange')) return 'bg-orange-500';
-    if (desc.color.includes('red')) return 'bg-red-500';
-    return 'bg-slate-500';
-  };
-
   const getHexColor = (typeId: string) => {
     const desc = TYPE_DESCRIPTIONS.find(t => t.id === typeId);
     if (!desc) return '#64748b'; // slate-500
     if (desc.color.includes('green')) return '#22c55e'; // green-500
     if (desc.color.includes('blue')) return '#3b82f6'; // blue-500
-    if (desc.color.includes('orange')) return '#f97316'; // orange-500
+    if (desc.color.includes('orange')) return '#f59e0b'; // orange-500
     if (desc.color.includes('red')) return '#ef4444'; // red-500
-    return '#64748b';
+    return '#64748b'; // slate-500
   };
+
+  // --- Prayer Shift occupancy logic ---
+  const prayerShiftStats = Array.from({ length: 12 }, (_, i) => {
+    const slotHour = 6 + i;
+    const count = prayerSignups.filter(s => s.slot_number === slotHour).length;
+    const hourLabel = `${slotHour.toString().padStart(2, '0')}:00`;
+    return { hour: hourLabel, count, slot: slotHour };
+  });
+
+  const getDayLabel = (day: string) => day.split(' – ')[0]; // Extract just "Segunda-feira"
+
+  const totalPrayerInscriptions = prayerSignups.length;
 
   const handleArchiveFast = async () => {
     const eventName = prompt('Digite o nome deste evento para salvar no histórico (ex: "Jejum Março 2026"):');
@@ -441,8 +461,6 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
             );
           })}
         </div>
-
-
       </div>
     );
   };
@@ -518,11 +536,6 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
     }
   };
 
-  const filteredMembers = members.filter(m =>
-    m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.phone.includes(searchTerm)
-  );
-
   const handleRunReminders = async () => {
     setIsProcessingReminders(true);
     try {
@@ -544,99 +557,973 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
     }
   };
 
+  const filteredMembers = members.filter(m =>
+    m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    m.phone.includes(searchTerm)
+  );
+
   return (
-    <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden min-h-[700px] flex flex-col transition-all border border-white/20 dark:border-slate-700">
-      {/* Admin Header - Premium Gradient */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 flex justify-between items-center relative overflow-hidden">
-        {/* Abstract background accent */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col items-center py-6 md:py-10 px-4">
+      <div className="w-full max-w-[1440px] bg-white dark:bg-slate-900 shadow-[0_30px_70px_rgba(0,0,0,0.15)] dark:shadow-[0_30px_70px_rgba(0,0,0,0.4)] overflow-hidden min-h-[850px] flex flex-col transition-all border border-slate-200 dark:border-slate-800 rounded-none md:rounded-lg">
+        {/* Admin Header - Premium Gradient */}
+        <div className="bg-slate-950 text-white p-7 flex justify-between items-center relative overflow-hidden border-b border-white/5">
+          {/* Subtle Obsidian Accent */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-[100px] -mr-32 -mt-32 pointer-events-none"></div>
 
-        <div className="relative z-10">
-          <h2 className="text-2xl font-black flex items-center gap-3 tracking-tight">
-            <div className="relative">
-              <div className="w-3 h-3 rounded-full bg-green-400 animate-pulse"></div>
-              <div className="absolute inset-0 w-3 h-3 rounded-full bg-green-400 animate-ping opacity-75"></div>
-            </div>
-            <span>Painel Administrativo</span>
-          </h2>
-          <p className="text-slate-400 text-sm font-bold mt-1 ml-6 uppercase tracking-widest opacity-60">Sistema de Gestão & Ciclos</p>
+          <div className="relative z-10">
+            <h2 className="text-xl font-bold flex items-center gap-3 tracking-tighter uppercase italic">
+              <div className="relative">
+                <div className="w-2 h-2 bg-emerald-400"></div>
+                <div className="absolute inset-0 w-2 h-2 bg-emerald-400 animate-ping opacity-20"></div>
+              </div>
+              <span>Admin Control Panel</span>
+            </h2>
+            <p className="text-slate-500 text-[10px] font-black mt-1 ml-5 uppercase tracking-[0.3em] opacity-80">Jejum & Relógio • Gestão Central</p>
+          </div>
+
+          <button
+            onClick={onLogout}
+            className="relative z-10 group flex items-center gap-2 text-slate-400 hover:text-white transition-all bg-white/5 hover:bg-white/10 px-5 py-2.5 rounded-none border border-white/10 text-[11px] font-bold uppercase tracking-widest"
+          >
+            <LogOut size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+            <span>Sair do Sistema</span>
+          </button>
         </div>
 
-        <button
-          onClick={onLogout}
-          className="relative z-10 group flex items-center gap-2 text-slate-300 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full text-sm backdrop-blur-sm border border-white/10"
-        >
-          <LogOut size={16} className="group-hover:-translate-x-0.5 transition-transform" />
-          <span>Sair</span>
-        </button>
-      </div>
-
-      {/* Tabs - Modern Navigation - Refactored to Pills */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 sticky top-0 z-20">
-        <div className="flex overflow-x-auto gap-2 scrollbar-hide bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-xl max-w-fit">
-          {[
-            { id: 'participants', icon: <Users size={16} />, label: 'Participantes' },
-            { id: 'members', icon: <BookOpen size={16} />, label: 'Membros' },
-            { id: 'prayer-clock', icon: <Clock size={16} />, label: 'Relógio' },
-            { id: 'prayer-campaigns', icon: <List size={16} />, label: 'Campanhas' },
-            { id: 'analytics', icon: <BarChart3 size={16} />, label: 'Estatísticas' },
-            { id: 'reminders', icon: <Activity size={16} />, label: 'Lembretes' },
-            { id: 'settings', icon: <Settings size={16} />, label: 'Configurações' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`px-4 py-2 text-sm font-semibold flex items-center gap-2 transition-all rounded-lg whitespace-nowrap
+        {/* Tabs - Modern Navigation - Refactored to Pills */}
+        <div className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-6 py-0 sticky top-0 z-20">
+          <div className="flex overflow-x-auto gap-0 scrollbar-hide">
+            {[
+              { id: 'participants', icon: <Users size={14} />, label: 'Participantes' },
+              { id: 'members', icon: <BookOpen size={14} />, label: 'Membros' },
+              { id: 'prayer-clock', icon: <Clock size={14} />, label: 'Relógio' },
+              { id: 'prayer-campaigns', icon: <List size={14} />, label: 'Campanhas' },
+              { id: 'analytics', icon: <BarChart3 size={14} />, label: 'Estatísticas' },
+              { id: 'reminders', icon: <Activity size={14} />, label: 'Lembretes' },
+              { id: 'settings', icon: <Settings size={14} />, label: 'Configurações' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-6 py-5 text-[11px] font-bold uppercase tracking-widest flex items-center gap-2.5 transition-all border-b-2 whitespace-nowrap
                 ${activeTab === tab.id
-                  ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-slate-200 dark:ring-slate-600'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800'
-                }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
+                    ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 bg-emerald-50/10'
+                    : 'border-transparent text-slate-500 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'
+                  }`}
+              >
+                <div className={activeTab === tab.id ? 'text-emerald-500' : 'text-slate-400'}>{tab.icon}</div>
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="p-6 flex-1 overflow-auto bg-slate-50 dark:bg-slate-900">
+        <div className="p-6 flex-1 overflow-auto bg-slate-50 dark:bg-slate-900">
 
-        {/* --- PARTICIPANTS TAB --- */}
-        {activeTab === 'participants' && (
-          <div className="space-y-6 animate-fade-in">
-            {/* Toolbar - Single Line on Desktop */}
-            <div className="flex flex-col xl:flex-row gap-4 justify-between bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 backdrop-blur-md bg-white/80 dark:bg-slate-800/80">
-              <div className="flex flex-col md:flex-row gap-3 flex-1">
-                <div className="relative flex-1 group max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors h-4 w-4" />
+          {/* --- PARTICIPANTS TAB --- */}
+          {activeTab === 'participants' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Toolbar - Single Line on Desktop */}
+              <div className="flex flex-col xl:flex-row gap-4 justify-between bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 backdrop-blur-md bg-white/80 dark:bg-slate-800/80">
+                <div className="flex flex-col md:flex-row gap-3 flex-1">
+                  <div className="relative flex-1 group max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors h-4 w-4" />
+                    <input
+                      type="text"
+                      placeholder="Buscar..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all focus:max-w-full"
+                    />
+                  </div>
+
+                  {/* Filter Dropdowns */}
+                  <div className="flex gap-2">
+                    <select
+                      value={filterDay}
+                      onChange={(e) => setFilterDay(e.target.value)}
+                      className="px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer transition-all min-w-[140px]"
+                    >
+                      <option value="">Todos os Dias</option>
+                      {settings.fastDays.map((day, i) => (
+                        <option key={i} value={day}>{day}</option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value)}
+                      className="px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer transition-all min-w-[140px]"
+                    >
+                      <option value="">Todos os Tipos</option>
+                      {TYPE_DESCRIPTIONS.map(t => (
+                        <option key={t.id} value={t.id}>{t.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Action Buttons - More Compact on Desktop */}
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={handlePrepareNextMonth}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-0.5"
+                  >
+                    <Sparkles size={16} />
+                    <span className="hidden sm:inline">Próximo Mês</span>
+                  </button>
+                  <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
+                    <button
+                      onClick={handleArchiveFast}
+                      className="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 rounded-md transition-all"
+                      title="Encerrar Jejum"
+                    >
+                      <Archive size={18} />
+                    </button>
+                    <button
+                      onClick={exportCSV}
+                      className="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 rounded-md transition-all"
+                      title="Exportar CSV"
+                    >
+                      <Download size={18} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Table - Optimized for Desktop with Sticky Header */}
+              <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden transition-all">
+                <div className="overflow-x-auto max-h-[600px]">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md z-10 border-b border-slate-200 dark:border-slate-700">
+                      <tr>
+                        <th className="px-8 py-5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Participante</th>
+                        <th className="px-8 py-5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Compromisso</th>
+                        <th className="px-8 py-5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Categoria</th>
+                        <th className="px-8 py-5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Inscrição</th>
+                        <th className="px-8 py-5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-right">Controle</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                      {filteredParticipants.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-20 text-center text-slate-400 dark:text-slate-500">
+                            <div className="flex flex-col items-center justify-center gap-4">
+                              <Search size={48} className="opacity-10" />
+                              <p className="font-medium">Nenhum registro encontrado para estes filtros.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredParticipants.map(p => (
+                          <tr key={p.id} className="group hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all duration-300">
+                            <td className="px-8 py-5">
+                              <div className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{p.name}</div>
+                              <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold">{p.phone}</div>
+                            </td>
+                            <td className="px-8 py-5">
+                              <div className="flex flex-wrap gap-2">
+                                {p.days.length === settings.fastDays.length && settings.fastDays.length > 0 ? (
+                                  <span className="bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                                    Semana Toda
+                                  </span>
+                                ) : (
+                                  p.days.map((day, idx) => {
+                                    const dayName = day.split(' – ')[0];
+                                    return (
+                                      <span key={idx} className="bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 group-hover:border-indigo-200 dark:group-hover:border-indigo-800 transition-colors">
+                                        {dayName}
+                                      </span>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-8 py-5">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-widest shadow-sm border ${p.type.includes('Água') ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                p.type.includes('Parcial') ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                                  p.type.includes('Total') ? 'bg-red-50 text-red-700 border-red-100' :
+                                    'bg-indigo-50 text-indigo-700 border-indigo-100'
+                                }`}>
+                                {p.type.split('–')[0]}
+                              </span>
+                            </td>
+                            <td className="px-8 py-5 text-slate-500 dark:text-slate-400 text-xs font-bold">
+                              {new Date(p.createdAt).toLocaleDateString('pt-BR')}
+                            </td>
+                            <td className="px-8 py-5 text-right">
+                              <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                                <button
+                                  onClick={() => handleSendWhatsApp(p)}
+                                  className="p-2 text-slate-400 hover:text-green-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all shadow-sm hover:shadow-md"
+                                  title="Enviar para WhatsApp"
+                                >
+                                  <MessageCircle size={18} />
+                                </button>
+                                <button
+                                  onClick={() => handleEditClick(p)}
+                                  className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all shadow-sm hover:shadow-md"
+                                  title="Editar"
+                                >
+                                  <Pencil size={18} />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(p.id!)}
+                                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all shadow-sm hover:shadow-md"
+                                  title="Excluir"
+                                >
+                                  <Trash size={18} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="text-xs font-medium text-slate-400 dark:text-slate-500 text-right px-2">
+                Total: {filteredParticipants.length} registros
+              </div>
+            </div>
+          )}
+
+          {/* --- ANALYTICS TAB --- */}
+          {activeTab === 'analytics' && (
+            <div className="space-y-6">
+              {/* Dashboard Grid - Optimized for Desktop */}
+              {/* Summary Stats Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-slate-50 dark:bg-slate-950/40 p-6 border border-slate-200 dark:border-white/5 shadow-sm flex items-center justify-between group rounded-none">
+                  <div>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-1 opacity-70">Inscritos</p>
+                    <h3 className="text-3xl font-black text-slate-800 dark:text-white">{participants.length}</h3>
+                  </div>
+                  <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                    <Users className="text-emerald-500 w-6 h-6" />
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-950/40 p-6 border border-slate-200 dark:border-white/5 shadow-sm flex items-center justify-between group rounded-none">
+                  <div>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-1 opacity-70">Maior Adesão</p>
+                    <h3 className="text-lg font-black text-slate-800 dark:text-white truncate max-w-[140px]">
+                      {dayCounts.length > 0 && dayCounts[0][1] > 0 ? getDayLabel(dayCounts[0][0]) : '-'}
+                    </h3>
+                  </div>
+                  <div className="w-12 h-12 bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
+                    <Flame className="text-orange-500 w-6 h-6" />
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-950/40 p-6 border border-slate-200 dark:border-white/5 shadow-sm flex items-center justify-between group rounded-none">
+                  <div>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-1 opacity-70">Membros</p>
+                    <h3 className="text-3xl font-black text-slate-800 dark:text-white">{members.length}</h3>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                    <BookOpen className="text-blue-500 w-6 h-6" />
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-950/40 p-6 border border-slate-200 dark:border-white/5 shadow-sm flex items-center justify-between group rounded-none">
+                  <div>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em] mb-1 opacity-70">Relógio</p>
+                    <h3 className="text-3xl font-black text-slate-800 dark:text-white">{totalPrayerInscriptions}</h3>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                    <Clock className="text-blue-500 w-6 h-6" />
+                  </div>
+                </div>
+              </div>
+
+              {/* --- NEW PREMIUM ANALYTICS CHARTS --- */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-8">
+                {/* Termômetro da Semana - Vertical Bars */}
+                <div className="bg-slate-800/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-700/50 shadow-2xl flex flex-col w-full h-full min-h-[400px]">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center">
+                      <Activity className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white tracking-tight">Termômetro da Semana</h3>
+                  </div>
+
+                  <div className="flex-1 flex items-end justify-between gap-2 px-2 mt-auto pb-4">
+                    {['Segunda – Oração', 'Terça – Intercessão', 'Quarta – Avivamento', 'Quinta – Família', 'Sexta – Gratidão'].map((day, i) => {
+                      const shortName = ['SEG', 'TER', 'QUA', 'QUI', 'SEX'][i];
+                      // Find actual count for this day from our data
+                      const countEntry = dayCounts.find(d => d[0].startsWith(shortName) || d[0].includes(['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'][i]));
+                      const count = countEntry ? countEntry[1] : 0;
+
+                      // We need a non-zero max to avoid NaN
+                      const effectiveMax = maxDayCount > 0 ? maxDayCount : 1;
+                      const percentage = Math.max(5, (count / effectiveMax) * 100); // Minimum 5% height to always be visible
+
+                      // Highlighting the current/max day (Purple Ban check -> using Indigo for premium look)
+                      const isMax = count === maxDayCount && count > 0;
+
+                      return (
+                        <div key={day} className="flex flex-col items-center justify-end h-full w-full group">
+                          {/* Number above bar */}
+                          <div className={`text-xs font-black mb-3 transition-all transform translate-y-2 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 ${isMax ? 'text-indigo-300 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]' : 'text-slate-400'}`}>
+                            {count}
+                          </div>
+
+                          {/* The Bar */}
+                          <div className="relative w-8 md:w-10 h-64 bg-slate-800/50 rounded-none flex items-end p-0.5 overflow-hidden border border-slate-700/50">
+                            <div
+                              className={`w-full transition-all duration-1000 ease-out relative overflow-hidden ${isMax
+                                ? 'bg-gradient-to-t from-emerald-600 via-emerald-500 to-emerald-400'
+                                : 'bg-gradient-to-t from-slate-700 to-slate-600'}`}
+                              style={{ height: `${percentage}%` }}
+                            >
+                              {/* Inner glow/reflection */}
+                              <div className="absolute inset-x-0 top-0 h-4 bg-white/20 blur-[2px]"></div>
+                            </div>
+                          </div>
+
+                          {/* Day Label below bar */}
+                          <div className={`mt-4 text-[10px] font-black tracking-widest uppercase ${isMax ? 'text-emerald-400' : 'text-slate-500'}`}>
+                            {shortName}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Column 2: Jejum Stats Stack */}
+                <div className="flex flex-col gap-6 h-full">
+                  {/* Modalidades Escolhidas */}
+                  <div className="bg-slate-800/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-700/50 shadow-2xl flex-1 flex flex-col">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
+                        <PieChart className="w-5 h-5 text-emerald-400" />
+                      </div>
+                      <h3 className="text-lg font-bold text-white tracking-tight">Modalidades Escolhidas</h3>
+                    </div>
+
+                    <div className="space-y-4 flex-1 justify-center flex flex-col">
+                      {typeCounts.map(([typeId, count], index) => {
+                        if (index >= 4) return null; // Show top 4
+
+                        const desc = TYPE_DESCRIPTIONS.find(t => t.id === typeId);
+                        const label = desc ? desc.title.split('–')[0].trim() : typeId;
+                        const total = participants.length > 0 ? participants.length : 1;
+                        const percentage = Math.round((count / total) * 100);
+
+                        const colors = [
+                          'from-emerald-500 to-emerald-400',
+                          'from-slate-400 to-slate-300',
+                          'from-rose-500 to-rose-400',
+                          'from-orange-500 to-orange-400'
+                        ];
+
+                        const barColor = colors[index % colors.length];
+
+                        return (
+                          <div key={typeId} className="group relative">
+                            <div className="flex justify-between items-end mb-1.5">
+                              <span className="text-sm font-bold text-slate-200 truncate pr-4">{label}</span>
+                              <div className="flex items-baseline gap-2 shrink-0">
+                                <span className="text-sm font-black text-white">{count}</span>
+                                <span className="text-[10px] font-bold text-slate-500">({percentage}%)</span>
+                              </div>
+                            </div>
+
+                            <div className="w-full bg-slate-900/80 rounded-full h-1.5 overflow-hidden ring-1 ring-inset ring-white/5">
+                              <div
+                                className={`h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r ${barColor}`}
+                                style={{ width: `${percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Horário de Entrega */}
+                  <div className="bg-slate-800/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-700/50 shadow-2xl flex-1 flex flex-col">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-orange-400" />
+                      </div>
+                      <h3 className="text-lg font-bold text-white tracking-tight">Horário de Entrega</h3>
+                    </div>
+
+                    <div className="space-y-3.5 flex-1 justify-center flex flex-col">
+                      {timeCounts.map(([time, count], index) => {
+                        if (index >= 5) return null;
+
+                        const shortTime = time.split('–')[0].trim();
+                        const total = participants.length > 0 ? participants.length : 1;
+                        const percentage = Math.round((count / total) * 100);
+
+                        return (
+                          <div key={time} className="flex items-center gap-4 group">
+                            <div className="w-10 text-right text-xs font-bold text-slate-400 group-hover:text-slate-300 transition-colors">
+                              {percentage}%
+                            </div>
+
+                            <div className="flex-1">
+                              <div className="text-[11px] font-bold text-slate-200 mb-1">{shortTime}</div>
+                              <div className="w-full bg-slate-900/80 rounded-full h-1.5 overflow-hidden ring-1 ring-inset ring-white/5">
+                                <div
+                                  className="h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r from-orange-500 to-amber-400"
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 3: Ocupação do Relógio (06h - 17h) */}
+                <div className="bg-slate-800/80 backdrop-blur-xl p-6 rounded-3xl border border-slate-700/50 shadow-2xl flex flex-col h-full min-h-[400px]">
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <h3 className="text-lg font-bold text-white tracking-tight">Ocupação do Relógio</h3>
+                    </div>
+                    <span className="text-[10px] font-bold text-blue-400 border border-blue-400/30 px-2 py-0.5 tracking-tighter italic">
+                      DIURNO
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 flex-1">
+                    {prayerShiftStats.map(({ hour, count }) => {
+                      const isFull = count >= 7;
+                      const isAlmostFull = count >= 5 && count < 7;
+                      const barColor = isFull ? 'from-rose-600 to-red-500' : isAlmostFull ? 'from-amber-600 to-orange-400' : 'from-blue-600 to-sky-400';
+                      const percentage = Math.max(10, (count / 10) * 100);
+
+                      return (
+                        <div key={hour} className="group flex flex-col">
+                          <div className="flex justify-between items-center mb-1.5 px-0.5">
+                            <span className="text-[11px] font-bold text-slate-400 tracking-wide group-hover:text-white transition-colors">
+                              {hour}
+                            </span>
+                            <span className={`text-[10px] font-black ${isFull ? 'text-red-400' : 'text-blue-400'}`}>
+                              {count}/10
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-900/80 rounded-full overflow-hidden ring-1 ring-inset ring-white/5">
+                            <div
+                              className={`h-full rounded-full transition-all duration-1000 ease-out bg-gradient-to-r ${barColor}`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {!activePrayerCampaign && (
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-500 space-y-2 opacity-50">
+                      <Clock size={40} className="mb-2" />
+                      <p className="text-sm font-medium">Campanha Offline</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-center mt-6">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                  Jejum não é sobre fome, é sobre foco em Deus.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* --- PRAYER CLOCK TAB --- */}
+          {activeTab === 'prayer-clock' && (
+            <div className="max-w-4xl mx-auto">
+              <PrayerCampaignManager />
+            </div>
+          )}
+
+          {/* --- REMINDERS TAB --- */}
+          {activeTab === 'reminders' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div>
+                  <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Activity size={24} className="text-indigo-500" />
+                    Sistema de Lembretes Automáticos
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+                    O sistema envia notificações às 20h da véspera (Jejum) e 30min antes (Oração).
+                  </p>
+                </div>
+                <button
+                  onClick={handleRunReminders}
+                  disabled={isProcessingReminders}
+                  className={`flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all active:scale-95 disabled:opacity-50 ${isProcessingReminders ? 'animate-pulse' : ''}`}
+                >
+                  {isProcessingReminders ? <RefreshCw size={20} className="animate-spin" /> : <RefreshCw size={20} />}
+                  {isProcessingReminders ? 'Processando...' : 'Processar Agora'}
+                </button>
+              </div>
+
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
+                  <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                    <List size={14} /> últimos Envios
+                  </h4>
+                  <span className="text-[10px] font-bold text-slate-400">Total: {reminderLogs.length} logs recentes</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 dark:bg-slate-900/30">
+                        <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Membro</th>
+                        <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tipo</th>
+                        <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Referência</th>
+                        <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Data Envio</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                      {reminderLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="px-6 py-20 text-center text-slate-400 text-sm italic">
+                            Nenhum lembrete enviado recentemente.
+                          </td>
+                        </tr>
+                      ) : (
+                        reminderLogs.map(log => (
+                          <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="font-bold text-slate-800 dark:text-slate-200 text-sm">{log.members?.name}</div>
+                              <div className="text-[10px] text-slate-500">{log.members?.phone}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${log.type === 'fasting'
+                                ? 'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800'
+                                : 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-800'
+                                }`}>
+                                {log.type === 'fasting' ? 'Jejum' : 'Oração'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 font-medium">
+                              {log.target_date}
+                            </td>
+                            <td className="px-6 py-4 text-right text-xs text-slate-500">
+                              {new Date(log.sent_at).toLocaleString('pt-BR')}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* --- SETTINGS TAB --- */}
+          {activeTab === 'settings' && (
+            <div className="space-y-6 max-w-2xl mx-auto pb-12">
+
+              {/* NOVO: Configuração do Modo do Evento */}
+              <div className="bg-indigo-600 dark:bg-indigo-700 p-6 rounded-xl shadow-lg border border-indigo-500 text-white animate-fade-in">
+                <div className="flex items-center gap-3 mb-4">
+                  <Settings className="w-6 h-6 text-indigo-200" />
+                  <h3 className="text-xl font-bold">Modo de Participação</h3>
+                </div>
+                <p className="text-indigo-100 text-sm mb-6">Selecione como os membros devem participar do evento atual.</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <button
+                    onClick={async () => {
+                      const res = await saveSystemConfig('fasting');
+                      if (res.success) {
+                        const config = await getSystemConfig();
+                        setSystemConfig(config as any);
+                        alert('Modo "Apenas Jejum" ativado!');
+                      }
+                    }}
+                    className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'fasting' ? 'border-white bg-white/20 shadow-inner' : 'border-indigo-400 bg-white/5 hover:bg-white/10'}`}
+                  >
+                    <div className="font-bold text-sm">Apenas Jejum</div>
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      const res = await saveSystemConfig('prayer_clock');
+                      if (res.success) {
+                        const config = await getSystemConfig();
+                        setSystemConfig(config as any);
+                        alert('Modo "Apenas Relógio" ativado!');
+                      }
+                    }}
+                    className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'prayer_clock' ? 'border-white bg-white/20 shadow-inner' : 'border-indigo-400 bg-white/5 hover:bg-white/10'}`}
+                  >
+                    <div className="font-bold text-sm">Apenas Relógio</div>
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      const res = await saveSystemConfig('combined');
+                      if (res.success) {
+                        const config = await getSystemConfig();
+                        setSystemConfig(config as any);
+                        alert('Modo "Combo" ativado!');
+                      }
+                    }}
+                    className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'combined' ? 'border-white bg-white shadow-md text-indigo-700 font-black' : 'border-indigo-300 bg-white/10 hover:bg-white/20'}`}
+                  >
+                    <div className="text-xs uppercase opacity-80 mb-1">Recomendado</div>
+                    <div className="font-bold text-sm">Modo Combo</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Configurações Visuais Existentes */}
+              <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
+                <h3 className="font-semibold text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Dias de Jejum</h3>
+                <div className="space-y-3">
+                  {settings.fastDays.map((day, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <div className="cursor-move text-slate-300 dark:text-slate-600">
+                        <GripVertical size={16} />
+                      </div>
+                      <input
+                        type="text"
+                        value={day}
+                        onChange={(e) => handleDayChange(index, e.target.value)}
+                        className="flex-1 p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none"
+                        placeholder="Nome do dia e tema"
+                      />
+                      <button
+                        onClick={() => removeDay(index)}
+                        className="text-red-400 hover:text-red-600 p-2 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition"
+                        title="Remover dia"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={addDay}
+                      className="flex items-center gap-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 px-3 py-1.5 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800 transition"
+                    >
+                      <Plus size={14} /> Adicionar Dia
+                    </button>
+                    <button
+                      onClick={resetDays}
+                      className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 px-3 py-1.5"
+                    >
+                      Restaurar Padrão
+                    </button>
+                  </div>
+                </div>
+
+                <h3 className="font-semibold text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2 pt-6">Identidade Visual</h3>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Título do Aplicativo</label>
                   <input
                     type="text"
-                    placeholder="Buscar..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all focus:max-w-full"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none"
+                    value={settings.appTitle}
+                    onChange={e => setSettings({ ...settings, appTitle: e.target.value })}
+                    placeholder="Ex: Jejum Congregacional"
                   />
                 </div>
 
-                {/* Filter Dropdowns */}
-                <div className="flex gap-2">
-                  <select
-                    value={filterDay}
-                    onChange={(e) => setFilterDay(e.target.value)}
-                    className="px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer transition-all min-w-[140px]"
-                  >
-                    <option value="">Todos os Dias</option>
-                    {settings.fastDays.map((day, i) => (
-                      <option key={i} value={day}>{day}</option>
-                    ))}
-                  </select>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Título do Relógio de Oração</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none"
+                    value={settings.prayerClockTitle || ''}
+                    onChange={e => setSettings({ ...settings, prayerClockTitle: e.target.value })}
+                    placeholder="Padrão: Relógio de Oração"
+                  />
+                </div>
 
-                  <select
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
-                    className="px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer transition-all min-w-[140px]"
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Ícone Principal</label>
+                  <div className="flex flex-wrap gap-2">
+                    {LOGO_OPTIONS.map((logo) => (
+                      <button
+                        key={logo.id}
+                        onClick={() => setSettings({ ...settings, logoId: logo.id })}
+                        className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all w-20 h-20 ${settings.logoId === logo.id
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-200 dark:ring-indigo-800'
+                          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600'
+                          }`}
+                      >
+                        {logo.component}
+                        <span className="text-xs mt-2 font-medium">{logo.label}</span>
+                      </button>
+                    ))}
+
+                    {/* Upload Option */}
+                    <label className="cursor-pointer flex flex-col items-center justify-center p-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all w-20 h-20">
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                      />
+                      <span className="text-2xl text-slate-400 dark:text-slate-500">+</span>
+                      <span className="text-xs mt-1 font-medium text-slate-500 dark:text-slate-400">Upload</span>
+                    </label>
+                  </div>
+
+                  {/* Preview custom logo text */}
+                  {settings.logoId?.startsWith('http') && (
+                    <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                      Logo personalizada selecionada.
+                    </div>
+                  )}
+                </div>
+
+                <h3 className="font-semibold text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2 pt-4">Conteúdo</h3>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Tema da Semana</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none"
+                    value={settings.theme}
+                    onChange={e => setSettings({ ...settings, theme: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Texto de Instrução</label>
+                  <textarea
+                    rows={4}
+                    className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none"
+                    value={settings.instruction}
+                    onChange={e => setSettings({ ...settings, instruction: e.target.value })}
+                  />
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Este texto aparece no topo do formulário de inscrição.</p>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    onClick={handleSaveSettings}
+                    className="flex items-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 text-sm font-medium"
                   >
-                    <option value="">Todos os Tipos</option>
+                    <Save size={16} /> Salvar Alterações
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* --- MEMBERS TAB --- */}
+          {activeTab === 'members' && (
+            <div className="space-y-6 animate-fade-in">
+              {/* Toolbar - Modern Card */}
+              <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors h-4 w-4" />
+                  <input
+                    type="text"
+                    placeholder="Buscar membro..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDeleteAllMembers}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
+                    title="Excluir todos os membros"
+                  >
+                    <Trash2 size={16} /> <span className="hidden sm:inline">Excluir Todos</span>
+                  </button>
+                  <button
+                    onClick={handleSyncMembers}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-all shadow-sm hover:shadow"
+                    title="Importar participantes da lista de jejum para membros"
+                  >
+                    <RefreshCw size={16} /> <span className="hidden sm:inline">Sincronizar</span>
+                  </button>
+                  <button
+                    onClick={() => openMemberModal()}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-0.5"
+                  >
+                    <Plus size={16} /> Novo Membro
+                  </button>
+                </div>
+              </div>
+
+              {/* Table - Glass/Clean Look */}
+              <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                    <tr>
+                      <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nome</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">WhatsApp</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Data Cadastro</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                    {filteredMembers.length === 0 ? (
+                      <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400">Nenhum membro encontrado.</td></tr>
+                    ) : (
+                      filteredMembers.map(m => (
+                        <tr key={m.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                          <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{m.name}</td>
+                          <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{m.phone}</td>
+                          <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">{new Date(m.createdAt).toLocaleDateString('pt-BR')}</td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => openHistoryModal(m)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all" title="Ver Histórico"><History size={16} /></button>
+                              <button onClick={() => openMemberModal(m)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all" title="Editar"><Pencil size={16} /></button>
+                              <button onClick={() => handleDeleteMember(m.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all" title="Excluir"><Trash size={16} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+
+        </div>
+
+        {/* History Modal */}
+        {isHistoryModalOpen && historyMember && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[80vh]">
+              <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Histórico de Participação</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{historyMember.name} • {historyMember.phone}</p>
+                </div>
+                <button onClick={() => setIsHistoryModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={20} /></button>
+              </div>
+              <div className="p-0 overflow-y-auto flex-1">
+                {memberHistory.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 dark:text-slate-500">
+                    <History className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                    Nenhum histórico encontrado para este membro.
+                  </div>
+                ) : (
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-100 dark:bg-slate-900/50 text-slate-600 dark:text-slate-300 font-semibold uppercase text-xs sticky top-0">
+                      <tr>
+                        <th className="px-6 py-3">Evento</th>
+                        <th className="px-6 py-3">Tipo</th>
+                        <th className="px-6 py-3">Dias</th>
+                        <th className="px-6 py-3 text-right">Data Arquivamento</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                      {memberHistory.map(h => (
+                        <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                          <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">{h.eventName}</td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                              {h.type.split('–')[0]}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-600 dark:text-slate-300 text-xs">
+                            {h.days.map(d => {
+                              const dayName = d.split(' – ')[0].split('-')[0];
+                              return dayName.substring(0, 1).toUpperCase() + dayName.substring(1, 3).toLowerCase();
+                            }).join(', ')}
+                          </td>
+                          <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-400 text-xs">
+                            {new Date(h.archivedAt).toLocaleDateString('pt-BR')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end">
+                <button onClick={() => setIsHistoryModalOpen(false)} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700">Fechar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Member Modal */}
+        {isMemberModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-fade-in-up">
+              <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{editingMember ? 'Editar Membro' : 'Novo Membro'}</h3>
+                <button onClick={() => setIsMemberModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={20} /></button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome</label>
+                  <input type="text" className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={memberForm.name} onChange={e => setMemberForm({ ...memberForm, name: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">WhatsApp</label>
+                  <input type="text" className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={memberForm.phone} onChange={e => setMemberForm({ ...memberForm, phone: e.target.value })} placeholder="(00) 00000-0000" />
+                </div>
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-2">
+                <button onClick={() => setIsMemberModalOpen(false)} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-sm">Cancelar</button>
+                <button onClick={handleSaveMember} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700">Salvar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {editingParticipant && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-fade-in-up">
+              <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Editar Participante</h3>
+                <button onClick={() => setEditingParticipant(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    value={editingParticipant.name}
+                    onChange={e => setEditingParticipant({ ...editingParticipant, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Telefone</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    value={editingParticipant.phone}
+                    onChange={e => setEditingParticipant({ ...editingParticipant, phone: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Jejum</label>
+                  <select
+                    className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                    value={editingParticipant.type}
+                    onChange={e => setEditingParticipant({ ...editingParticipant, type: e.target.value })}
+                  >
                     {TYPE_DESCRIPTIONS.map(t => (
                       <option key={t.id} value={t.id}>{t.title}</option>
                     ))}
@@ -644,877 +1531,99 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
                 </div>
               </div>
 
-              {/* Action Buttons - More Compact on Desktop */}
-              <div className="flex gap-2 shrink-0">
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-2">
                 <button
-                  onClick={handlePrepareNextMonth}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-0.5"
+                  onClick={() => setEditingParticipant(null)}
+                  className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-sm"
                 >
-                  <Sparkles size={16} />
-                  <span className="hidden sm:inline">Próximo Mês</span>
+                  Cancelar
                 </button>
-                <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
-                  <button
-                    onClick={handleArchiveFast}
-                    className="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 rounded-md transition-all"
-                    title="Encerrar Jejum"
-                  >
-                    <Archive size={18} />
-                  </button>
-                  <button
-                    onClick={exportCSV}
-                    className="p-2 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-600 rounded-md transition-all"
-                    title="Exportar CSV"
-                  >
-                    <Download size={18} />
-                  </button>
-                </div>
+                <button
+                  onClick={handleUpdate}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700"
+                >
+                  Salvar Alterações
+                </button>
               </div>
-            </div>
-
-            {/* Table - Optimized for Desktop with Sticky Header */}
-            <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden transition-all">
-              <div className="overflow-x-auto max-h-[600px]">
-                <table className="w-full text-left border-collapse">
-                  <thead className="sticky top-0 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md z-10 border-b border-slate-200 dark:border-slate-700">
-                    <tr>
-                      <th className="px-8 py-5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Participante</th>
-                      <th className="px-8 py-5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Compromisso</th>
-                      <th className="px-8 py-5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Categoria</th>
-                      <th className="px-8 py-5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Inscrição</th>
-                      <th className="px-8 py-5 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-right">Controle</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                    {filteredParticipants.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-20 text-center text-slate-400 dark:text-slate-500">
-                          <div className="flex flex-col items-center justify-center gap-4">
-                            <Search size={48} className="opacity-10" />
-                            <p className="font-medium">Nenhum registro encontrado para estes filtros.</p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredParticipants.map(p => (
-                        <tr key={p.id} className="group hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all duration-300">
-                          <td className="px-8 py-5">
-                            <div className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{p.name}</div>
-                            <div className="text-slate-500 dark:text-slate-400 text-xs font-semibold">{p.phone}</div>
-                          </td>
-                          <td className="px-8 py-5">
-                            <div className="flex flex-wrap gap-2">
-                              {p.days.length === settings.fastDays.length && settings.fastDays.length > 0 ? (
-                                <span className="bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-                                  Semana Toda
-                                </span>
-                              ) : (
-                                p.days.map((day, idx) => {
-                                  const dayName = day.split(' – ')[0];
-                                  return (
-                                    <span key={idx} className="bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 group-hover:border-indigo-200 dark:group-hover:border-indigo-800 transition-colors">
-                                      {dayName}
-                                    </span>
-                                  );
-                                })
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-8 py-5">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-widest shadow-sm border ${p.type.includes('Água') ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                              p.type.includes('Parcial') ? 'bg-orange-50 text-orange-700 border-orange-100' :
-                                p.type.includes('Total') ? 'bg-red-50 text-red-700 border-red-100' :
-                                  'bg-indigo-50 text-indigo-700 border-indigo-100'
-                              }`}>
-                              {p.type.split('–')[0]}
-                            </span>
-                          </td>
-                          <td className="px-8 py-5 text-slate-500 dark:text-slate-400 text-xs font-bold">
-                            {new Date(p.createdAt).toLocaleDateString('pt-BR')}
-                          </td>
-                          <td className="px-8 py-5 text-right">
-                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                              <button
-                                onClick={() => handleSendWhatsApp(p)}
-                                className="p-2 text-slate-400 hover:text-green-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all shadow-sm hover:shadow-md"
-                                title="Enviar para WhatsApp"
-                              >
-                                <MessageCircle size={18} />
-                              </button>
-                              <button
-                                onClick={() => handleEditClick(p)}
-                                className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all shadow-sm hover:shadow-md"
-                                title="Editar"
-                              >
-                                <Pencil size={18} />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(p.id!)}
-                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all shadow-sm hover:shadow-md"
-                                title="Excluir"
-                              >
-                                <Trash size={18} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="text-xs font-medium text-slate-400 dark:text-slate-500 text-right px-2">
-              Total: {filteredParticipants.length} registros
             </div>
           </div>
         )}
 
-        {/* --- ANALYTICS TAB --- */}
-        {activeTab === 'analytics' && (
-          <div className="space-y-6">
-            {/* Dashboard Grid - Optimized for Desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 dark:border-slate-700 shadow-xl flex items-center justify-between group hover:scale-[1.02] transition-all duration-300">
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mb-1">Inscritos</p>
-                  <h3 className="text-4xl font-black text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{participants.length}</h3>
-                </div>
-                <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform">
-                  <Users className="text-indigo-600 dark:text-indigo-400 w-7 h-7" />
-                </div>
-              </div>
-
-              <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 dark:border-slate-700 shadow-xl flex items-center justify-between group hover:scale-[1.02] transition-all duration-300">
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mb-1">Maior Adesão</p>
-                  <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 truncate max-w-[140px]">
-                    {dayCounts.length > 0 && dayCounts[0][1] > 0 ? getDayLabel(dayCounts[0][0]) : '-'}
-                  </h3>
-                  <div className="flex items-center gap-1.5 mt-1 text-green-600 dark:text-green-400 font-bold text-xs uppercase">
-                    <Activity size={12} />
-                    <span>{dayCounts.length > 0 && dayCounts[0][1] > 0 ? `${dayCounts[0][1]} Pessoas` : '0'}</span>
-                  </div>
-                </div>
-                <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center -rotate-3 group-hover:rotate-0 transition-transform">
-                  <Flame className="text-green-600 dark:text-green-400 w-7 h-7" />
-                </div>
-              </div>
-
-              <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 dark:border-slate-700 shadow-xl flex items-center justify-between group hover:scale-[1.02] transition-all duration-300">
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mb-1">Membros</p>
-                  <h3 className="text-4xl font-black text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{members.length}</h3>
-                </div>
-                <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform">
-                  <BookOpen className="text-blue-600 dark:text-blue-400 w-7 h-7" />
-                </div>
-              </div>
-
-              <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-md p-6 rounded-2xl border border-white/20 dark:border-slate-700 shadow-xl flex items-center justify-between group hover:scale-[1.02] transition-all duration-300">
-                <div>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mb-1">Atividade</p>
-                  <h3 className="text-4xl font-black text-slate-800 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">7d</h3>
-                </div>
-                <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center -rotate-3 group-hover:rotate-0 transition-transform">
-                  <Sparkles className="text-purple-600 dark:text-purple-400 w-7 h-7" />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Days Chart */}
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> Adesão por Dia
-                </h3>
-                <div className="space-y-4">
-                  {dayCounts.map(([day, count]) => (
-                    <div key={day} className="space-y-1">
-                      <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
-                        <span>{getDayLabel(day)}</span>
-                        <span className="font-medium">{count}</span>
-                      </div>
-                      <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
-                        <div
-                          className="bg-indigo-500 dark:bg-indigo-400 h-2.5 rounded-full transition-all duration-500"
-                          style={{ width: `${(count / maxDayCount) * 100}%` }}
-                        ></div>
-                      </div>
+        {/* WhatsApp Preview Modal */}
+        {isPreviewModalOpen && previewRecipient && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 dark:border-slate-700 animate-in zoom-in-95 duration-300">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                      <MessageCircle size={24} />
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Times Chart */}
-              <div className="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-                <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-orange-500 dark:text-orange-400" /> Preferência de Horário
-                </h3>
-                <div className="space-y-4">
-                  {timeCounts.map(([time, count]) => {
-                    const shortTime = time.split('–')[0].trim();
-                    return (
-                      <div key={time} className="space-y-1">
-                        <div className="flex justify-between text-xs text-slate-600 dark:text-slate-400">
-                          <span>{shortTime}</span>
-                          <span className="font-medium">{count}</span>
-                        </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
-                          <div
-                            className="bg-orange-400 dark:bg-orange-500 h-2.5 rounded-full transition-all duration-500"
-                            style={{ width: `${(count / maxTimeCount) * 100}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Types Chart with Toggle */}
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-              <div className="flex flex-row justify-between items-center mb-4">
-                <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                  <PieChart className="w-4 h-4 text-purple-500 dark:text-purple-400" /> Tipos de Jejum
-                </h3>
-
-                {/* Chart Type Toggle */}
-                <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
-                  <button
-                    onClick={() => setTypeChartMode('bar')}
-                    className={`p-1.5 rounded-md transition-all ${typeChartMode === 'bar' ? 'bg-white dark:bg-slate-600 shadow text-indigo-600 dark:text-indigo-300' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600'}`}
-                    title="Gráfico de Barras"
-                  >
-                    <List size={16} />
-                  </button>
-                  <button
-                    onClick={() => setTypeChartMode('pie')}
-                    className={`p-1.5 rounded-md transition-all ${typeChartMode === 'pie' ? 'bg-white dark:bg-slate-600 shadow text-indigo-600 dark:text-indigo-300' : 'text-slate-400 dark:text-slate-400 hover:text-slate-600'}`}
-                    title="Gráfico de Pizza"
-                  >
-                    <PieChart size={16} />
-                  </button>
-                </div>
-              </div>
-
-              {typeChartMode === 'bar' ? (
-                <div className="space-y-3 animate-fade-in">
-                  {typeCounts.map(([typeId, count]) => {
-                    const desc = TYPE_DESCRIPTIONS.find(t => t.id === typeId);
-                    const label = desc ? desc.title : typeId;
-                    const colorClass = getTypeColor(typeId);
-
-                    return (
-                      <div key={typeId} className="group hover:bg-slate-50 dark:hover:bg-slate-700/50 p-2 rounded-lg transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-xs md:text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                            <span className={`w-3 h-3 rounded-full ${colorClass}`}></span>
-                            {label}
-                          </span>
-                          <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{count}</span>
-                        </div>
-                        <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                          <div
-                            className={`${colorClass} h-2 rounded-full transition-all duration-500 opacity-80`}
-                            style={{ width: `${(count / maxTypeCount) * 100}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="animate-fade-in">
-                  {renderPieChart(typeCounts)}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* --- PRAYER CLOCK TAB --- */}
-        {activeTab === 'prayer-clock' && (
-          <div className="max-w-4xl mx-auto">
-            <PrayerCampaignManager />
-          </div>
-        )}
-
-        {/* --- REMINDERS TAB --- */}
-        {activeTab === 'reminders' && (
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-              <div>
-                <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                  <Activity size={24} className="text-indigo-500" />
-                  Sistema de Lembretes Automáticos
-                </h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-                  O sistema envia notificações às 20h da véspera (Jejum) e 30min antes (Oração).
-                </p>
-              </div>
-              <button
-                onClick={handleRunReminders}
-                disabled={isProcessingReminders}
-                className={`flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all active:scale-95 disabled:opacity-50 ${isProcessingReminders ? 'animate-pulse' : ''}`}
-              >
-                {isProcessingReminders ? <RefreshCw size={20} className="animate-spin" /> : <RefreshCw size={20} />}
-                {isProcessingReminders ? 'Processando...' : 'Processar Agora'}
-              </button>
-            </div>
-
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
-              <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
-                <h4 className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                  <List size={14} /> últimos Envios
-                </h4>
-                <span className="text-[10px] font-bold text-slate-400">Total: {reminderLogs.length} logs recentes</span>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 dark:bg-slate-900/30">
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Membro</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tipo</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Referência</th>
-                      <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Data Envio</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                    {reminderLogs.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-6 py-20 text-center text-slate-400 text-sm italic">
-                          Nenhum lembrete enviado recentemente.
-                        </td>
-                      </tr>
-                    ) : (
-                      reminderLogs.map(log => (
-                        <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="font-bold text-slate-800 dark:text-slate-200 text-sm">{log.members?.name}</div>
-                            <div className="text-[10px] text-slate-500">{log.members?.phone}</div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${log.type === 'fasting'
-                              ? 'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800'
-                              : 'bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-800'
-                              }`}>
-                              {log.type === 'fasting' ? 'Jejum' : 'Oração'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 font-medium">
-                            {log.target_date}
-                          </td>
-                          <td className="px-6 py-4 text-right text-xs text-slate-500">
-                            {new Date(log.sent_at).toLocaleString('pt-BR')}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* --- SETTINGS TAB --- */}
-        {activeTab === 'settings' && (
-          <div className="space-y-6 max-w-2xl mx-auto pb-12">
-
-            {/* NOVO: Configuração do Modo do Evento */}
-            <div className="bg-indigo-600 dark:bg-indigo-700 p-6 rounded-xl shadow-lg border border-indigo-500 text-white animate-fade-in">
-              <div className="flex items-center gap-3 mb-4">
-                <Settings className="w-6 h-6 text-indigo-200" />
-                <h3 className="text-xl font-bold">Modo de Participação</h3>
-              </div>
-              <p className="text-indigo-100 text-sm mb-6">Selecione como os membros devem participar do evento atual.</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <button
-                  onClick={async () => {
-                    const res = await saveSystemConfig('fasting');
-                    if (res.success) {
-                      const config = await getSystemConfig();
-                      setSystemConfig(config as any);
-                      alert('Modo "Apenas Jejum" ativado!');
-                    }
-                  }}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'fasting' ? 'border-white bg-white/20 shadow-inner' : 'border-indigo-400 bg-white/5 hover:bg-white/10'}`}
-                >
-                  <div className="font-bold text-sm">Apenas Jejum</div>
-                </button>
-
-                <button
-                  onClick={async () => {
-                    const res = await saveSystemConfig('prayer_clock');
-                    if (res.success) {
-                      const config = await getSystemConfig();
-                      setSystemConfig(config as any);
-                      alert('Modo "Apenas Relógio" ativado!');
-                    }
-                  }}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'prayer_clock' ? 'border-white bg-white/20 shadow-inner' : 'border-indigo-400 bg-white/5 hover:bg-white/10'}`}
-                >
-                  <div className="font-bold text-sm">Apenas Relógio</div>
-                </button>
-
-                <button
-                  onClick={async () => {
-                    const res = await saveSystemConfig('combined');
-                    if (res.success) {
-                      const config = await getSystemConfig();
-                      setSystemConfig(config as any);
-                      alert('Modo "Combo" ativado!');
-                    }
-                  }}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'combined' ? 'border-white bg-white shadow-md text-indigo-700 font-black' : 'border-indigo-300 bg-white/10 hover:bg-white/20'}`}
-                >
-                  <div className="text-xs uppercase opacity-80 mb-1">Recomendado</div>
-                  <div className="font-bold text-sm">Modo Combo</div>
-                </button>
-              </div>
-            </div>
-
-            {/* Configurações Visuais Existentes */}
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4">
-              <h3 className="font-semibold text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2">Dias de Jejum</h3>
-              <div className="space-y-3">
-                {settings.fastDays.map((day, index) => (
-                  <div key={index} className="flex gap-2 items-center">
-                    <div className="cursor-move text-slate-300 dark:text-slate-600">
-                      <GripVertical size={16} />
+                    <div>
+                      <h3 className="text-xl font-black tracking-tight">Revisar Mensagem</h3>
+                      <p className="text-green-100 text-xs font-bold uppercase tracking-widest opacity-80">WhatsApp para {previewRecipient.name.split(' ')[0]}</p>
                     </div>
-                    <input
-                      type="text"
-                      value={day}
-                      onChange={(e) => handleDayChange(index, e.target.value)}
-                      className="flex-1 p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none"
-                      placeholder="Nome do dia e tema"
-                    />
-                    <button
-                      onClick={() => removeDay(index)}
-                      className="text-red-400 hover:text-red-600 p-2 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition"
-                      title="Remover dia"
-                    >
-                      <Trash2 size={16} />
-                    </button>
                   </div>
-                ))}
-                <div className="flex gap-3 pt-2">
                   <button
-                    onClick={addDay}
-                    className="flex items-center gap-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 px-3 py-1.5 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border border-transparent hover:border-indigo-200 dark:hover:border-indigo-800 transition"
+                    onClick={() => setIsPreviewModalOpen(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20 transition-colors"
                   >
-                    <Plus size={14} /> Adicionar Dia
-                  </button>
-                  <button
-                    onClick={resetDays}
-                    className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 px-3 py-1.5"
-                  >
-                    Restaurar Padrão
+                    <X size={18} />
                   </button>
                 </div>
               </div>
 
-              <h3 className="font-semibold text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2 pt-6">Identidade Visual</h3>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Título do Aplicativo</label>
-                <input
-                  type="text"
-                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none"
-                  value={settings.appTitle}
-                  onChange={e => setSettings({ ...settings, appTitle: e.target.value })}
-                  placeholder="Ex: Jejum Congregacional"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Título do Relógio de Oração</label>
-                <input
-                  type="text"
-                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none"
-                  value={settings.prayerClockTitle || ''}
-                  onChange={e => setSettings({ ...settings, prayerClockTitle: e.target.value })}
-                  placeholder="Padrão: Relógio de Oração"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Ícone Principal</label>
-                <div className="flex flex-wrap gap-2">
-                  {LOGO_OPTIONS.map((logo) => (
-                    <button
-                      key={logo.id}
-                      onClick={() => setSettings({ ...settings, logoId: logo.id })}
-                      className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all w-20 h-20 ${settings.logoId === logo.id
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 ring-2 ring-indigo-200 dark:ring-indigo-800'
-                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-600'
-                        }`}
-                    >
-                      {logo.component}
-                      <span className="text-xs mt-2 font-medium">{logo.label}</span>
-                    </button>
-                  ))}
-
-                  {/* Upload Option */}
-                  <label className="cursor-pointer flex flex-col items-center justify-center p-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all w-20 h-20">
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="image/*"
-                      onChange={handleFileUpload}
-                    />
-                    <span className="text-2xl text-slate-400 dark:text-slate-500">+</span>
-                    <span className="text-xs mt-1 font-medium text-slate-500 dark:text-slate-400">Upload</span>
-                  </label>
+              {/* Modal Content */}
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <label className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Conteúdo da Mensagem</label>
+                  <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md">
+                    {previewRecipient.phone}
+                  </span>
                 </div>
 
-                {/* Preview custom logo text */}
-                {settings.logoId?.startsWith('http') && (
-                  <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                    Logo personalizada selecionada.
-                  </div>
-                )}
-              </div>
-
-              <h3 className="font-semibold text-slate-800 dark:text-slate-200 border-b dark:border-slate-700 pb-2 pt-4">Conteúdo</h3>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Tema da Semana</label>
-                <input
-                  type="text"
-                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none"
-                  value={settings.theme}
-                  onChange={e => setSettings({ ...settings, theme: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Texto de Instrução</label>
                 <textarea
-                  rows={4}
-                  className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none"
-                  value={settings.instruction}
-                  onChange={e => setSettings({ ...settings, instruction: e.target.value })}
+                  className="w-full h-80 p-4 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 bg-slate-50 dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 text-sm outline-none transition-all resize-none font-medium leading-relaxed scrollbar-hide"
+                  value={previewMessage}
+                  onChange={(e) => setPreviewMessage(e.target.value)}
+                  placeholder="Digite sua mensagem aqui..."
                 />
-                <p className="text-xs text-slate-500 dark:text-slate-400">Este texto aparece no topo do formulário de inscrição.</p>
+
+                <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500 px-1 italic">
+                  <Sparkles size={12} className="text-green-500" />
+                  <span>Você pode editar o texto acima antes de enviar.</span>
+                </div>
               </div>
 
-              <div className="pt-2">
+              {/* Modal Footer */}
+              <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex gap-3">
                 <button
-                  onClick={handleSaveSettings}
-                  className="flex items-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-700 dark:hover:bg-indigo-600 text-sm font-medium"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="flex-1 px-6 py-3 text-slate-600 dark:text-slate-400 font-bold text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all active:scale-95"
                 >
-                  <Save size={16} /> Salvar Alterações
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* --- MEMBERS TAB --- */}
-        {activeTab === 'members' && (
-          <div className="space-y-6 animate-fade-in">
-            {/* Toolbar - Modern Card */}
-            <div className="flex flex-col md:flex-row gap-4 justify-between bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
-              <div className="relative flex-1 group">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Buscar membro..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleDeleteAllMembers}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/30 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-all"
-                  title="Excluir todos os membros"
-                >
-                  <Trash2 size={16} /> <span className="hidden sm:inline">Excluir Todos</span>
+                  Cancelar
                 </button>
                 <button
-                  onClick={handleSyncMembers}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-600 transition-all shadow-sm hover:shadow"
-                  title="Importar participantes da lista de jejum para membros"
+                  onClick={confirmSendWhatsApp}
+                  disabled={isSendingWhatsApp}
+                  className="flex-3 px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                 >
-                  <RefreshCw size={16} /> <span className="hidden sm:inline">Sincronizar</span>
-                </button>
-                <button
-                  onClick={() => openMemberModal()}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:-translate-y-0.5"
-                >
-                  <Plus size={16} /> Novo Membro
-                </button>
-              </div>
-            </div>
-
-            {/* Table - Glass/Clean Look */}
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
-                  <tr>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nome</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">WhatsApp</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Data Cadastro</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                  {filteredMembers.length === 0 ? (
-                    <tr><td colSpan={4} className="px-6 py-12 text-center text-slate-400">Nenhum membro encontrado.</td></tr>
+                  {isSendingWhatsApp ? (
+                    <RefreshCw size={18} className="animate-spin" />
                   ) : (
-                    filteredMembers.map(m => (
-                      <tr key={m.id} className="group hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{m.name}</td>
-                        <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{m.phone}</td>
-                        <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-xs">{new Date(m.createdAt).toLocaleDateString('pt-BR')}</td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => openHistoryModal(m)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all" title="Ver Histórico"><History size={16} /></button>
-                            <button onClick={() => openMemberModal(m)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-all" title="Editar"><Pencil size={16} /></button>
-                            <button onClick={() => handleDeleteMember(m.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all" title="Excluir"><Trash size={16} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                    <Share2 size={18} />
                   )}
-                </tbody>
-              </table>
+                  {isSendingWhatsApp ? 'Enviando...' : 'Enviar Agora'}
+                </button>
+              </div>
             </div>
           </div>
         )}
+
 
 
       </div>
-
-      {/* History Modal */}
-      {isHistoryModalOpen && historyMember && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl overflow-hidden animate-fade-in-up flex flex-col max-h-[80vh]">
-            <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Histórico de Participação</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{historyMember.name} • {historyMember.phone}</p>
-              </div>
-              <button onClick={() => setIsHistoryModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={20} /></button>
-            </div>
-            <div className="p-0 overflow-y-auto flex-1">
-              {memberHistory.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 dark:text-slate-500">
-                  <History className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                  Nenhum histórico encontrado para este membro.
-                </div>
-              ) : (
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-100 dark:bg-slate-900/50 text-slate-600 dark:text-slate-300 font-semibold uppercase text-xs sticky top-0">
-                    <tr>
-                      <th className="px-6 py-3">Evento</th>
-                      <th className="px-6 py-3">Tipo</th>
-                      <th className="px-6 py-3">Dias</th>
-                      <th className="px-6 py-3 text-right">Data Arquivamento</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                    {memberHistory.map(h => (
-                      <tr key={h.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">{h.eventName}</td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
-                            {h.type.split('–')[0]}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-slate-600 dark:text-slate-300 text-xs">
-                          {h.days.map(d => {
-                            const dayName = d.split(' – ')[0].split('-')[0];
-                            return dayName.substring(0, 1).toUpperCase() + dayName.substring(1, 3).toLowerCase();
-                          }).join(', ')}
-                        </td>
-                        <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-400 text-xs">
-                          {new Date(h.archivedAt).toLocaleDateString('pt-BR')}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end">
-              <button onClick={() => setIsHistoryModalOpen(false)} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700">Fechar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Member Modal */}
-      {isMemberModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-fade-in-up">
-            <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{editingMember ? 'Editar Membro' : 'Novo Membro'}</h3>
-              <button onClick={() => setIsMemberModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={20} /></button>
-            </div>
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome</label>
-                <input type="text" className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={memberForm.name} onChange={e => setMemberForm({ ...memberForm, name: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">WhatsApp</label>
-                <input type="text" className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white" value={memberForm.phone} onChange={e => setMemberForm({ ...memberForm, phone: e.target.value })} placeholder="(00) 00000-0000" />
-              </div>
-            </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-2">
-              <button onClick={() => setIsMemberModalOpen(false)} className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-sm">Cancelar</button>
-              <button onClick={handleSaveMember} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700">Salvar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Modal */}
-      {editingParticipant && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-fade-in-up">
-            <div className="flex justify-between items-center p-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">Editar Participante</h3>
-              <button onClick={() => setEditingParticipant(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nome</label>
-                <input
-                  type="text"
-                  className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                  value={editingParticipant.name}
-                  onChange={e => setEditingParticipant({ ...editingParticipant, name: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Telefone</label>
-                <input
-                  type="text"
-                  className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                  value={editingParticipant.phone}
-                  onChange={e => setEditingParticipant({ ...editingParticipant, phone: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Jejum</label>
-                <select
-                  className="w-full p-2 border rounded-md dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-                  value={editingParticipant.type}
-                  onChange={e => setEditingParticipant({ ...editingParticipant, type: e.target.value })}
-                >
-                  {TYPE_DESCRIPTIONS.map(t => (
-                    <option key={t.id} value={t.id}>{t.title}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 flex justify-end gap-2">
-              <button
-                onClick={() => setEditingParticipant(null)}
-                className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md text-sm"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleUpdate}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700"
-              >
-                Salvar Alterações
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* WhatsApp Preview Modal */}
-      {isPreviewModalOpen && previewRecipient && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-white/20 dark:border-slate-700 animate-in zoom-in-95 duration-300">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                    <MessageCircle size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black tracking-tight">Revisar Mensagem</h3>
-                    <p className="text-green-100 text-xs font-bold uppercase tracking-widest opacity-80">WhatsApp para {previewRecipient.name.split(' ')[0]}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsPreviewModalOpen(false)}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/20 transition-colors"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <label className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Conteúdo da Mensagem</label>
-                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md">
-                  {previewRecipient.phone}
-                </span>
-              </div>
-
-              <textarea
-                className="w-full h-80 p-4 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 bg-slate-50 dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 text-sm outline-none transition-all resize-none font-medium leading-relaxed scrollbar-hide"
-                value={previewMessage}
-                onChange={(e) => setPreviewMessage(e.target.value)}
-                placeholder="Digite sua mensagem aqui..."
-              />
-
-              <div className="flex items-center gap-2 text-[10px] text-slate-400 dark:text-slate-500 px-1 italic">
-                <Sparkles size={12} className="text-green-500" />
-                <span>Você pode editar o texto acima antes de enviar.</span>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-6 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex gap-3">
-              <button
-                onClick={() => setIsPreviewModalOpen(false)}
-                className="flex-1 px-6 py-3 text-slate-600 dark:text-slate-400 font-bold text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all active:scale-95"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmSendWhatsApp}
-                disabled={isSendingWhatsApp}
-                className="flex-3 px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
-              >
-                {isSendingWhatsApp ? (
-                  <RefreshCw size={18} className="animate-spin" />
-                ) : (
-                  <Share2 size={18} />
-                )}
-                {isSendingWhatsApp ? 'Enviando...' : 'Enviar Agora'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-
     </div>
   );
 };
