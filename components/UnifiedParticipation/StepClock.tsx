@@ -135,27 +135,47 @@ export function StepClock() {
                     ))}
                 </div>
 
-                <div>
-                    <h2 className="text-3xl font-black text-white tracking-tight leading-tight">
-                        {appSettings?.prayerClockTitle?.includes('(')
-                            ? appSettings.prayerClockTitle
-                            : `${appSettings?.prayerClockTitle || 'Relógio de Oração'}`}
-                    </h2>
-                    <p className="text-indigo-300/80 text-sm font-bold mt-1">
-                        {new Date(activeCampaign?.startDate).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}
-                    </p>
-                    <div className="flex items-center justify-center gap-2 mt-4">
-                        <span className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-indigo-300 flex items-center gap-2 shadow-lg backdrop-blur-sm">
+                <div className="flex flex-col items-center justify-center space-y-4">
+                    {/* Badges */}
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                        <span className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-indigo-200 shadow-lg backdrop-blur-sm flex items-center gap-1.5">
+                            <Flame size={12} className="text-orange-500" />
+                            {new Date(activeCampaign?.startDate).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '')}
+                        </span>
+                        <span className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-1.5 shadow-lg backdrop-blur-sm">
                             <Users size={12} className="text-indigo-500" />
-                            Meta: {currentLimit} pessoas / hora
+                            Meta: {currentLimit}/hora
                         </span>
                     </div>
+
+                    {/* Titulo */}
+                    <div className="space-y-1">
+                        <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-none">
+                            {(() => {
+                                const rawTitle = appSettings?.prayerClockTitle || 'Relógio de Oração';
+                                return rawTitle.split('(')[0].trim();
+                            })()}
+                        </h2>
+                        {(() => {
+                            const rawTitle = appSettings?.prayerClockTitle || '';
+                            if (rawTitle.includes('(')) {
+                                const sub = rawTitle.substring(rawTitle.indexOf('(')).replace(/[()]/g, '').trim();
+                                return (
+                                    <p className="text-indigo-400 font-bold tracking-widest uppercase text-[11px] mt-2">
+                                        {sub}
+                                    </p>
+                                );
+                            }
+                            return null;
+                        })()}
+                    </div>
+
+                    <p className="text-slate-400 text-xs md:text-sm font-medium px-8 leading-relaxed max-w-sm mx-auto pt-1">
+                        {minCount < currentLimit - 3
+                            ? "Preencha todos os horários para liberarmos novas vagas!"
+                            : "Estamos quase lá! Vamos fechar todos os horários."}
+                    </p>
                 </div>
-                <p className="text-slate-400 text-xs font-medium px-8 leading-relaxed max-w-sm mx-auto">
-                    {minCount < currentLimit - 3
-                        ? "Preencha todos os horários para liberarmos novas vagas!"
-                        : "Estamos quase lá! Vamos fechar todos os horários."}
-                </p>
             </div>
 
             <div className="grid grid-cols-3 gap-2 max-h-[45vh] overflow-y-auto pr-1">
