@@ -343,10 +343,21 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
 
   // --- Prayer Shift occupancy logic ---
   const prayerShiftStats = Array.from({ length: 12 }, (_, i) => {
-    const slotHour = 6 + i;
-    const count = prayerSignups.filter(s => s.slot_number === slotHour).length;
-    const hourLabel = `${slotHour.toString().padStart(2, '0')}:00`;
-    return { hour: hourLabel, count, slot: slotHour };
+    const slotIndex = i; // represent the slot number 0-11
+    const count = prayerSignups.filter(s => s.slot_number === slotIndex).length;
+
+    // Horário fixo baseado no início padrão (06h) ou dinâmico se tivermos campanha ativa
+    let hourLabel = "";
+    if (activePrayerCampaign && activePrayerCampaign.start_date) {
+      const baseDate = new Date(activePrayerCampaign.start_date);
+      baseDate.setHours(baseDate.getHours() + slotIndex);
+      hourLabel = baseDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      const slotHour = 6 + i;
+      hourLabel = `${slotHour.toString().padStart(2, '0')}:00`;
+    }
+
+    return { hour: hourLabel, count, slot: slotIndex };
   });
 
   const getDayLabel = (day: string) => day.split(' – ')[0]; // Extract just "Segunda-feira"

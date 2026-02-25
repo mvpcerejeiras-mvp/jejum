@@ -127,6 +127,11 @@ export function PrayerCampaignManager() {
     const renderGridPreview = (campaign: PrayerCampaign) => {
         const signups = selectedSignups;
         const slots = Array.from({ length: campaign.duration }, (_, i) => i);
+        const getSlotTimeLabel = (slot: number) => {
+            const date = new Date(campaign.startDate);
+            date.setHours(date.getHours() + slot);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        };
 
         // Check Phase 1 (all >= 7)
         const slotCounts = slots.map(s => signups.filter(su => su.slotNumber === s).length);
@@ -150,8 +155,8 @@ export function PrayerCampaignManager() {
                         }
 
                         return (
-                            <div key={slot} className={`text-center p-1 rounded border text-xs flex flex-col items-center justify-center ${bgColor}`} title={`Horário ${slot}h - ${count} pessoas`}>
-                                <span className="font-bold">{slot}h</span>
+                            <div key={slot} className={`text-center p-1 rounded border text-[10px] flex flex-col items-center justify-center ${bgColor}`} title={`Horário ${getSlotTimeLabel(slot)} - ${count} pessoas`}>
+                                <span className="font-bold">{getSlotTimeLabel(slot)}</span>
                                 <span>{count}</span>
                             </div>
                         )
@@ -175,7 +180,7 @@ export function PrayerCampaignManager() {
                                 <tbody>
                                     {selectedSignups.sort((a, b) => a.slotNumber - b.slotNumber).map(s => (
                                         <tr key={s.id} className="border-b last:border-0 border-gray-100 dark:border-slate-800 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
-                                            <td className="py-1 font-mono text-indigo-600 dark:text-indigo-400">{s.slotNumber}h</td>
+                                            <td className="py-1 font-mono text-indigo-600 dark:text-indigo-400 font-bold">{getSlotTimeLabel(s.slotNumber)}</td>
                                             <td className="py-1 font-medium">{s.member?.name || 'Desconhecido'}</td>
 
                                             <td className="py-1">{s.member?.phone || '-'}</td>
