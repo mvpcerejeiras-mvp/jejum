@@ -18,41 +18,54 @@ export const processReminders = async () => {
         const now = new Date();
         const currentHour = now.getHours();
 
-        // 1. LEMBRETES DE JEJUM (20:00 da véspera)
-        if (currentHour >= 20) {
-            const tomorrow = new Date(now);
-            tomorrow.setDate(now.getDate() + 1);
-            const tomorrowFullName = await findActiveDayName(tomorrow);
+        // 1. LEMBRETES DE JEJUM
+        // Enviar às 20h da véspera OU se for execução manual pela manhã (antes das 12h) para o dia atual
+        const isEvening = currentHour >= 20;
+        const isMorningManual = currentHour < 12; // Se o admin clicar manualmente de manhã
 
-            if (tomorrowFullName) {
+        if (isEvening || isMorningManual) {
+            const targetDateObj = new Date(now);
+            if (isEvening) {
+                // Se for noite, o alvo é amanhã
+                targetDateObj.setDate(now.getDate() + 1);
+            }
+            // Se for manhã manual, o alvo é HOJE (já é o dia do jejum)
+
+            const targetDayName = await findActiveDayName(targetDateObj);
+
+            if (targetDayName) {
                 const { data: participants } = await supabase
                     .from('participants')
                     .select('*, members(id, name, phone)')
-                    .contains('days', [tomorrowFullName]);
+                    .contains('days', [targetDayName]);
 
                 for (const p of (participants || [])) {
                     const member = p.members;
                     if (!member) continue;
 
-                    // Verificar se já enviamos log para esse jejum específico (amanhã)
-                    const targetDate = tomorrow.toISOString().split('T')[0];
+                    // Verificar se já enviamos log para esse jejum específico
+                    const targetDateStr = targetDateObj.toISOString().split('T')[0];
                     const { data: existingLog } = await supabase
                         .from('reminder_logs')
                         .select('id')
                         .eq('member_id', member.id)
                         .eq('type', 'fasting')
-                        .eq('target_date', targetDate)
+                        .eq('target_date', targetDateStr)
                         .maybeSingle();
 
                     if (!existingLog) {
-                        const msg = `Olá, ${member.name}! Passando para lembrar do seu Jejum amanhã (${tomorrowFullName.split(' – ')[0]}). Que seja um tempo precioso de consagração! 🔥`;
+                        const dayLabel = targetDayName.split(' – ')[0];
+                        const msg = isEvening
+                            ? `Olá, ${member.name}! Passando para lembrar do seu Jejum amanhã (${dayLabel}). Que seja um tempo precioso de consagração! 🔥`
+                            : `Olá, ${member.name}! Passando para lembrar que hoje é seu dia de Jejum (${dayLabel}). Que seja um tempo precioso de consagração! 🔥`;
+
                         const res = await sendWhatsAppMessage(member.phone, msg);
 
                         if (res.success) {
                             await supabase.from('reminder_logs').insert([{
                                 member_id: member.id,
                                 type: 'fasting',
-                                target_date: targetDate
+                                target_date: targetDateStr
                             }]);
                             results.fastingReminders++;
                         } else {
@@ -134,9 +147,9 @@ async function findActiveDayName(date: Date): Promise<string | null> {
     const daysMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
     const searchPrefix = daysMap[dayOfWeek];
 
-    const { data: sets } = await supabase.from('settings').select('fastDays').maybeSingle();
-    if (!sets?.fastDays) return null;
+    const { data: sets } = await supabase.from('app_settings').select('fast_days').maybeSingle();
+    if (!sets?.fast_days) return null;
 
     // Encontrar o dia nas configurações que começa com o nome do dia da semana atual
-    return sets.fastDays.find((d: string) => d.startsWith(searchPrefix)) || null;
+    return sets.fast_days.find((d: string) => d.startsWith(searchPrefix)) || null;
 }

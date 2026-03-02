@@ -2,18 +2,22 @@
 const ZAPI_INSTANCE = "3EE7F9BBDFF3F155E45CFE9C8F58AF1C";
 const ZAPI_TOKEN = "DF5749F6CDD891E19ED684E9";
 const SECURITY_TOKEN = "F00812244ef824e12b7faa33658278319S";
+const ZAPI_URL = `https://api.z-api.io/instances/${ZAPI_INSTANCE}/token/${ZAPI_TOKEN}/send-text`;
 
-async function checkStatus() {
-    // Tentando o endpoint de status/instancia
-    const url = `https://api.z-api.io/instances/${ZAPI_INSTANCE}/token/${ZAPI_TOKEN}/status`;
-    console.log(`Checando: ${url}`);
+async function testSend() {
+    console.log(`Testando envio para: ${ZAPI_URL}`);
 
     try {
-        const response = await fetch(url, {
+        const response = await fetch(ZAPI_URL, {
+            method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Client-Token": SECURITY_TOKEN
-            }
+            },
+            body: JSON.stringify({
+                phone: "5569993122866", // Um dos números do print
+                message: "Teste de sistema - Ignorar",
+            }),
         });
 
         console.log(`Status HTTP: ${response.status}`);
@@ -24,4 +28,4 @@ async function checkStatus() {
     }
 }
 
-checkStatus();
+testSend();
