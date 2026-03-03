@@ -7,6 +7,8 @@ import { FastDay } from '../types';
  * Esta lógica será executada periodicamente (ex: cada 30min)
  */
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const processReminders = async () => {
     const results = {
         fastingReminders: 0,
@@ -17,19 +19,17 @@ export const processReminders = async () => {
     try {
         const now = new Date();
         const currentHour = now.getHours();
+        let totalSent = 0;
 
         // 1. LEMBRETES DE JEJUM
-        // Enviar às 20h da véspera OU se for execução manual pela manhã (antes das 12h) para o dia atual
         const isEvening = currentHour >= 20;
-        const isMorningManual = currentHour < 12; // Se o admin clicar manualmente de manhã
+        const isMorningManual = currentHour < 12;
 
         if (isEvening || isMorningManual) {
             const targetDateObj = new Date(now);
             if (isEvening) {
-                // Se for noite, o alvo é amanhã
                 targetDateObj.setDate(now.getDate() + 1);
             }
-            // Se for manhã manual, o alvo é HOJE (já é o dia do jejum)
 
             const targetDayName = await findActiveDayName(targetDateObj);
 
@@ -43,7 +43,6 @@ export const processReminders = async () => {
                     const member = p.members;
                     if (!member) continue;
 
-                    // Verificar se já enviamos log para esse jejum específico
                     const targetDateStr = targetDateObj.toISOString().split('T')[0];
                     const { data: existingLog } = await supabase
                         .from('reminder_logs')
@@ -54,6 +53,16 @@ export const processReminders = async () => {
                         .maybeSingle();
 
                     if (!existingLog) {
+                        // Delay antes de enviar (exceto o primeiro de todos no process completo)
+                        if (totalSent > 0) {
+                            if (totalSent % 10 === 0) {
+                                await delay(60000); // Pausa de 60s a cada 10
+                            } else {
+                                // 10-120s aleatório
+                                await delay(Math.floor(Math.random() * (120000 - 10000 + 1)) + 10000);
+                            }
+                        }
+
                         const dayLabel = targetDayName.split(' – ')[0];
                         const msg = isEvening
                             ? `Olá, ${member.name}! Passando para lembrar do seu Jejum amanhã (${dayLabel}). Que seja um tempo precioso de consagração! 🔥`
@@ -68,6 +77,7 @@ export const processReminders = async () => {
                                 target_date: targetDateStr
                             }]);
                             results.fastingReminders++;
+                            totalSent++;
                         } else {
                             results.errors.push(`Erro ao enviar lembrete de jejum para ${member.name}: ${res.message}`);
                         }
@@ -77,7 +87,6 @@ export const processReminders = async () => {
         }
 
         // 2. LEMBRETES DE ORAÇÃO (30 min antes)
-        // Buscar campanha ativa
         const { data: campaigns } = await supabase
             .from('prayer_campaigns')
             .select('*')
@@ -86,8 +95,6 @@ export const processReminders = async () => {
 
         if (campaigns) {
             const startDate = new Date(campaigns.startDate);
-            // Procurar slots que começam daqui a ~30 minutos
-            // Um slot de 30min antes significa que o horário atual + 30min = início do slot
             const targetTime = new Date(now.getTime() + 30 * 60000);
             const hoursSinceStart = Math.floor((targetTime.getTime() - startDate.getTime()) / (3600 * 1000));
 
@@ -102,7 +109,6 @@ export const processReminders = async () => {
                     const member = s.members;
                     if (!member) continue;
 
-                    const slotTimeStr = targetTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                     const targetDateKey = `campaign_${campaigns.id}_slot_${hoursSinceStart}`;
 
                     const { data: existingLog } = await supabase
@@ -114,6 +120,16 @@ export const processReminders = async () => {
                         .maybeSingle();
 
                     if (!existingLog) {
+                        // Delay antes de enviar (considerando totalSent acumulado)
+                        if (totalSent > 0) {
+                            if (totalSent % 10 === 0) {
+                                await delay(60000);
+                            } else {
+                                await delay(Math.floor(Math.random() * (120000 - 10000 + 1)) + 10000);
+                            }
+                        }
+
+                        const slotTimeStr = targetTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                         const msg = `Olá, ${member.name}! Seu horário de intercessão no Relógio de Oração começa em 30 minutos (${slotTimeStr}). Prepare seu coração! 🙏✨`;
                         const res = await sendWhatsAppMessage(member.phone, msg);
 
@@ -124,6 +140,7 @@ export const processReminders = async () => {
                                 target_date: targetDateKey
                             }]);
                             results.prayerReminders++;
+                            totalSent++;
                         } else {
                             results.errors.push(`Erro ao enviar lembrete de oração para ${member.name}: ${res.message}`);
                         }
