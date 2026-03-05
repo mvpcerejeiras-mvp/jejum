@@ -13,6 +13,7 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
     const [signups, setSignups] = useState<PrayerSignup[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         loadData();
@@ -130,7 +131,6 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                 };
             }
         }
-
         return {
             total,
             currentSlotIndex,
@@ -138,9 +138,19 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
             slotCounts,
             progress,
             timeLeft,
-            preStartCount
+            preStartCount,
+            searchResult: searchQuery.length >= 3 ? signups.find(s => {
+                const q = searchQuery.toLowerCase();
+                const qDigits = q.replace(/\D/g, '');
+
+                const nameMatch = s.member?.name?.toLowerCase().includes(q);
+                // Só valida busca por telefone se o usuário digitar algum número
+                const phoneMatch = qDigits !== '' && s.member?.phone?.replace(/\D/g, '').includes(qDigits);
+
+                return nameMatch || phoneMatch;
+            }) : null
         };
-    }, [campaign, signups, currentTime]);
+    }, [campaign, signups, currentTime, searchQuery]);
 
     if (loading) {
         return (
@@ -201,6 +211,51 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                             <span className="font-black text-sm uppercase tracking-wider text-slate-700">{campaign.duration} Horas de Chamado</span>
                         </div>
                     </div>
+                </div>
+
+                {/* Search My Schedule */}
+                <div className="max-w-xl mx-auto mb-16 animate-fade-in" style={{ animationDelay: '200ms' }}>
+                    <div className="bg-white/80 backdrop-blur-2xl p-2 rounded-[2.5rem] border border-slate-200 shadow-xl flex items-center gap-2 group focus-within:ring-4 focus-within:ring-indigo-100 transition-all">
+                        <div className="pl-6 text-slate-400">
+                            <Users size={20} />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="VEJA SEU HORÁRIO: Digite seu nome ou telefone..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="flex-1 bg-transparent border-none focus:ring-0 text-slate-700 font-bold placeholder:text-slate-300 py-4"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="p-2 mr-2 bg-slate-100 text-slate-400 rounded-full hover:bg-slate-200 transition-colors"
+                            >
+                                <Sparkles size={16} className="rotate-45" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Search Result Card */}
+                    {stats.searchResult && (
+                        <div className="mt-4 animate-fade-in-up">
+                            <div className="bg-indigo-600 p-6 rounded-[2.5rem] text-white shadow-2xl shadow-indigo-200 border border-indigo-500 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 group-hover:scale-110 transition-transform">
+                                    <Trophy size={80} />
+                                </div>
+                                <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+                                    <div className="text-center md:text-left">
+                                        <p className="text-indigo-100 text-[10px] font-black uppercase tracking-[0.3em] mb-1">Encontramos você! 🛡️</p>
+                                        <h3 className="text-2xl font-black tracking-tight">{stats.searchResult.member?.name}</h3>
+                                    </div>
+                                    <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20 text-center">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-100 mb-1">Seu Turno é às</p>
+                                        <p className="text-3xl font-black tabular-nums">{formatTime(stats.searchResult.slotNumber)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Main Content Grid */}
