@@ -301,7 +301,7 @@ const App: React.FC = () => {
             />
           )}
 
-          {view === 'public' && <PublicDashboard />}
+          {view === 'public' && <PublicDashboard onJoin={() => setView('wizard')} />}
 
         </div>
 
