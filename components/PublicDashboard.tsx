@@ -184,7 +184,7 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                 <div className="text-center mb-16 animate-fade-in">
                     <div className="inline-flex items-center gap-3 bg-white border border-indigo-100 px-6 py-2 rounded-full mb-8 shadow-sm">
                         <Sparkles size={14} className="text-indigo-600" />
-                        <span className="text-indigo-600 text-[10px] font-black uppercase tracking-[0.3em]">Propósito Live</span>
+                        <span className="text-indigo-600 text-[10px] font-black uppercase tracking-[0.3em]">Painel da Intercessão</span>
                     </div>
 
                     <h1 className="text-6xl md:text-8xl font-black mb-6 tracking-tighter leading-[0.9] text-slate-900">
