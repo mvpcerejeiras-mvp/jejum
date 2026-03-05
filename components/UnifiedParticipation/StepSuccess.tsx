@@ -7,7 +7,7 @@ import { FastDay, FastType, FastTime } from '../../types';
 import { TYPE_DESCRIPTIONS } from '../../constants';
 
 export function StepSuccess({ onFinish }: { onFinish: () => void }) {
-    const { user, fastingData, clockData, appSettings, justSaved, setJustSaved } = useParticipation() as any;
+    const { user, fastingData, clockData, appSettings, justSaved, setJustSaved, participationData } = useParticipation() as any;
     const [saving, setSaving] = useState(true);
     const [error, setError] = useState('');
     const [savedSlots, setSavedSlots] = useState<string[]>([]);
@@ -64,8 +64,11 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
                     if (active) setCampaignDate(new Date(active.startDate));
                 }
 
-                await clearPrayerSignups(clockData.campaignId, user.id);
-                const promises = slots.map(slot => addPrayerSignup(clockData.campaignId, user.id, slot));
+                const initialSlots = participationData?.prayer?.map((s: any) => s.slot_number) || [];
+                const newSlots = slots.filter(slot => !initialSlots.includes(slot));
+
+                // Only add the NEW slots. We no longer clear previous signups.
+                const promises = newSlots.map(slot => addPrayerSignup(clockData.campaignId, user.id, slot));
                 await Promise.all(promises);
             } else {
                 // No clock data, but let's try to get campaign date for fasting dates accuracy

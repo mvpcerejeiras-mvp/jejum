@@ -61,6 +61,12 @@ export function StepClock() {
     };
 
     const handleSlotClick = (slot: number) => {
+        // Bloquear desmarcação de um horário que a pessoa já tinha antes (salvo no banco)
+        if (initialSlots.includes(slot)) {
+            alert("Este horário já foi confirmado e não pode ser desmarcado.");
+            return;
+        }
+
         const count = getSlotCount(slot);
         const isFull = count >= currentLimit;
 
@@ -182,13 +188,17 @@ export function StepClock() {
             <div className="grid grid-cols-3 gap-2 max-h-[45vh] overflow-y-auto pr-1">
                 {slots.map(slot => {
                     const isSelected = selectedSlots.includes(slot);
+                    const isLocked = initialSlots.includes(slot);
                     const count = getSlotCount(slot);
                     const isFull = count >= currentLimit;
                     const isNearFull = count >= currentLimit - 2 && !isFull;
 
                     let statusLabel = "LIVRE";
                     let statusColor = "text-emerald-400";
-                    if (isFull) {
+                    if (isLocked) {
+                        statusLabel = "CONFIRMADO";
+                        statusColor = "text-indigo-200";
+                    } else if (isFull) {
                         statusLabel = "LOTADO";
                         statusColor = "text-red-500";
                     } else if (isNearFull) {
@@ -201,18 +211,20 @@ export function StepClock() {
                             key={slot}
                             onClick={() => handleSlotClick(slot)}
                             className={`relative p-3 pt-4 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all 
-                                ${isFull
-                                    ? (isSelected
-                                        ? 'bg-red-600 border-red-500 text-white shadow-lg shadow-red-500/40 scale-[1.02] z-10 ring-2 ring-red-500/50'
-                                        : 'bg-red-500/10 border-red-500/40 text-red-200')
-                                    : isSelected
-                                        ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-[1.02] z-10'
-                                        : isNearFull
-                                            ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
-                                            : 'bg-slate-800/50 border-slate-700 text-slate-300 hover:border-slate-500'
+                                ${isLocked
+                                    ? 'bg-indigo-900 border-indigo-700 text-white opacity-80 cursor-not-allowed shadow-inner z-10'
+                                    : isFull
+                                        ? (isSelected
+                                            ? 'bg-red-600 border-red-500 text-white shadow-lg shadow-red-500/40 scale-[1.02] z-10 ring-2 ring-red-500/50'
+                                            : 'bg-red-500/10 border-red-500/40 text-red-200')
+                                        : isSelected
+                                            ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-[1.02] z-10'
+                                            : isNearFull
+                                                ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
+                                                : 'bg-slate-800/50 border-slate-700 text-slate-300 hover:border-slate-500'
                                 }`}
                         >
-                            <span className={`absolute top-1.5 text-[9px] font-black uppercase tracking-wider ${isSelected ? (isFull ? 'text-red-100' : 'text-indigo-100') : statusColor}`}>
+                            <span className={`absolute top-1.5 text-[9px] font-black uppercase tracking-wider ${isSelected && !isLocked ? (isFull ? 'text-red-100' : 'text-indigo-100') : statusColor}`}>
                                 {statusLabel}
                             </span>
                             <span className="text-lg font-bold">{getSlotTime(slot)}</span>
