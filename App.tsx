@@ -3,6 +3,7 @@ import RegistrationForm from './components/RegistrationForm';
 import AdminDashboard from './components/AdminDashboard';
 import HomeDashboard from './components/HomeDashboard';
 import WeeklySchedule from './components/WeeklySchedule';
+import PublicDashboard from './components/PublicDashboard';
 import { getSettings } from './services/db';
 import { DEFAULT_THEME, DEFAULT_INSTRUCTION, DEFAULT_APP_TITLE, DEFAULT_LOGO, DEFAULT_DAYS } from './constants';
 import { Flame, Lock, Cross, BookOpen, Heart, Sun, Mountain, Star, Moon, Sparkles } from 'lucide-react';
@@ -10,7 +11,7 @@ import { useParticipation } from './contexts/ParticipationContext';
 import { Wizard } from './components/UnifiedParticipation/Wizard';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'home' | 'form' | 'admin' | 'login' | 'schedule' | 'clock' | 'wizard'>('home');
+  const [view, setView] = useState<'home' | 'form' | 'admin' | 'login' | 'schedule' | 'clock' | 'wizard' | 'public'>('home');
   const [password, setPassword] = useState('');
   const [appSettings, setAppSettings] = useState({
     theme: DEFAULT_THEME,
@@ -34,6 +35,12 @@ const App: React.FC = () => {
     } else {
       setIsDarkMode(false);
       document.documentElement.classList.remove('dark');
+    }
+
+    // Check for public view parameter
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('v') === 'public') {
+      setView('public');
     }
   }, []);
 
@@ -87,10 +94,12 @@ const App: React.FC = () => {
     }
   };
 
+  if (view === 'public') {
+    return <PublicDashboard />;
+  }
+
   if (view === 'wizard') {
-    return (
-      <Wizard onExit={() => setView('home')} />
-    );
+    return <Wizard onExit={() => setView('home')} />;
   }
 
   return (
@@ -291,6 +300,8 @@ const App: React.FC = () => {
               onSettingsChange={() => setRefreshKey(k => k + 1)}
             />
           )}
+
+          {view === 'public' && <PublicDashboard />}
 
         </div>
 
