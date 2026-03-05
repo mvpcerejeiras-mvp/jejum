@@ -448,40 +448,55 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                             const isCurrent = stats.currentSlotIndex === i;
                             const isFull = slot.count >= slot.capacity;
                             const isAlmostFull = slot.count === slot.capacity - 1;
-                            const isFilling = slot.count < slot.capacity - 1 && slot.count > 0;
+                            const isEmpty = slot.count === 0;
+                            const isFilling = !isFull && !isAlmostFull && !isEmpty;
 
-                            let cardClass = "bg-white border-slate-200 hover:border-indigo-200 hover:bg-slate-50 transition-transform duration-500 hover:scale-105 shadow-sm";
+                            let cardClass = "bg-white border-slate-200 shadow-sm";
                             let iconColor = "text-slate-400";
                             let countColor = "text-slate-700";
-                            let statusText = "Livre";
+                            let statusText = "0 Vagas";
+                            let cursorClass = "cursor-default";
+                            let onClickHandler = undefined;
 
                             if (isCurrent) {
                                 cardClass = "bg-indigo-600 border-indigo-400 shadow-[0_20px_40px_rgba(79,70,229,0.2)] ring-4 ring-indigo-100 z-10 scale-110";
                                 iconColor = "text-indigo-100";
                                 countColor = "text-white";
                                 statusText = "AGORA";
-                            } else if (isAlmostFull) {
-                                cardClass = "bg-amber-50 border-amber-200 shadow-[0_10px_20px_rgba(245,158,11,0.05)]";
-                                iconColor = "text-amber-500";
-                                countColor = "text-amber-700";
-                                statusText = "1 Vaga";
                             } else if (isFull) {
                                 cardClass = "bg-slate-50 border-slate-200 opacity-60";
                                 iconColor = "text-slate-400";
                                 countColor = "text-slate-500";
                                 statusText = "Completo";
+                            } else if (isAlmostFull) {
+                                cardClass = "bg-amber-50 border-amber-400 hover:border-amber-500 shadow-[0_4px_15px_rgba(245,158,11,0.2)] hover:scale-105 transition-all z-10";
+                                iconColor = "text-amber-600";
+                                countColor = "text-amber-800";
+                                statusText = "1 VAGA - CLIQUE AQUI";
+                                cursorClass = "cursor-pointer";
+                                onClickHandler = onJoin;
+                            } else if (isEmpty) {
+                                cardClass = "bg-[#f0fdf4] border-emerald-400 hover:border-emerald-500 hover:bg-emerald-50 shadow-[0_4px_15px_rgba(52,211,153,0.3)] ring-2 ring-emerald-100 hover:scale-105 transition-all z-10";
+                                iconColor = "text-emerald-600";
+                                countColor = "text-emerald-800";
+                                statusText = `${slot.capacity} VAGAS - CLIQUE`;
+                                cursorClass = "cursor-pointer";
+                                onClickHandler = onJoin;
                             } else if (isFilling) {
-                                cardClass = "bg-white border-indigo-100 hover:border-indigo-300";
-                                iconColor = "text-indigo-400";
-                                countColor = "text-indigo-900";
-                                statusText = `${slot.capacity - slot.count} Vagas`;
+                                cardClass = "bg-[#f0fdf4] border-emerald-400 hover:border-emerald-500 hover:bg-emerald-50 shadow-[0_4px_15px_rgba(52,211,153,0.3)] ring-2 ring-emerald-100 hover:scale-105 transition-all z-10";
+                                iconColor = "text-emerald-600";
+                                countColor = "text-emerald-800";
+                                statusText = `${slot.capacity - slot.count} VAGAS - CLIQUE`;
+                                cursorClass = "cursor-pointer";
+                                onClickHandler = onJoin;
                             }
 
                             return (
                                 <div
                                     key={i}
+                                    onClick={onClickHandler}
                                     style={{ animationDelay: `${i * 30}ms` }}
-                                    className={`relative p-6 rounded-[2.5rem] border flex flex-col items-center justify-center gap-3 group overflow-hidden cursor-default animate-fade-in-up ${cardClass}`}
+                                    className={`relative p-6 rounded-[2.5rem] border flex flex-col items-center justify-center gap-3 group overflow-hidden animate-fade-in-up transition-all duration-300 ${cursorClass} ${cardClass}`}
                                 >
                                     {/* Abstract background pattern for premium feel */}
                                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] group-hover:opacity-[0.05] transition-opacity"></div>
@@ -490,7 +505,7 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                                     <div className="absolute top-0 left-0 right-0 h-[40%] bg-gradient-to-b from-white/10 to-transparent skew-y-[-10deg] transform -translate-y-10 group-hover:translate-y-[-20%] transition-transform duration-1000"></div>
 
                                     <div className="flex flex-col items-center">
-                                        <span className="text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">
+                                        <span className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${iconColor}`}>
                                             {PRAYER_SLOT_NAMES[slot.index % 12]}
                                         </span>
                                         <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${iconColor}`}>
@@ -502,10 +517,10 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                                         <span className={`text-4xl font-black transition-colors tabular-nums tracking-tighter ${countColor}`}>
                                             {slot.count}
                                         </span>
-                                        <span className={`text-[10px] font-bold absolute -right-5 top-0 opacity-20 ${countColor}`}>/ {slot.capacity}</span>
+                                        <span className={`text-[10px] font-bold absolute -right-5 top-0 opacity-40 ${countColor}`}>/ {slot.capacity}</span>
                                     </div>
 
-                                    <span className={`text-[8px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full border border-current opacity-40 ${iconColor}`}>
+                                    <span className={`text-[8px] font-black uppercase whitespace-nowrap tracking-[0.2em] px-3 py-1.5 rounded-full border border-current opacity-90 shadow-sm transition-all group-hover:scale-105 group-hover:bg-white/50 ${iconColor}`}>
                                         {statusText}
                                     </span>
 
@@ -519,7 +534,7 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                                     )}
 
                                     {/* Hover glow effect */}
-                                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/[0.02] transition-colors duration-500"></div>
+                                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/[0.05] transition-colors duration-500"></div>
                                 </div>
                             );
                         })}
