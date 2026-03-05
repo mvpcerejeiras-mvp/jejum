@@ -372,9 +372,9 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                     <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-12 gap-4">
                         {stats.slotCounts.map((slot, i) => {
                             const isCurrent = stats.currentSlotIndex === i;
-                            const isFilling = slot.count < slot.capacity && slot.count > 0;
-                            const isAlmostFull = slot.count >= slot.capacity - 1;
                             const isFull = slot.count >= slot.capacity;
+                            const isAlmostFull = slot.count === slot.capacity - 1;
+                            const isFilling = slot.count < slot.capacity - 1 && slot.count > 0;
 
                             let cardClass = "bg-white border-slate-200 hover:border-indigo-200 hover:bg-slate-50 transition-transform duration-500 hover:scale-105 shadow-sm";
                             let iconColor = "text-slate-400";
@@ -391,6 +391,11 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                                 iconColor = "text-amber-500";
                                 countColor = "text-amber-700";
                                 statusText = "1 Vaga";
+                            } else if (isFull) {
+                                cardClass = "bg-slate-50 border-slate-200 opacity-60";
+                                iconColor = "text-slate-400";
+                                countColor = "text-slate-500";
+                                statusText = "Completo";
                             } else if (isFilling) {
                                 cardClass = "bg-white border-indigo-100 hover:border-indigo-300";
                                 iconColor = "text-indigo-400";
