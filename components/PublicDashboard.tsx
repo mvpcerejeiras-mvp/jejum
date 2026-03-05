@@ -3,6 +3,7 @@ import { supabase } from '../services/supabaseClient';
 import { getPrayerCampaigns, getPrayerSignups } from '../services/db';
 import { PrayerCampaign, PrayerSignup } from '../types';
 import { Clock, Users, Calendar, Activity, Sparkles, Trophy, MousePointer2 } from 'lucide-react';
+import { PRAYER_SLOT_NAMES } from '../constants';
 
 interface PublicDashboardProps {
     onJoin?: () => void;
@@ -250,7 +251,7 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                                         <h3 className="text-2xl font-black tracking-tight">{stats.searchResult.member?.name}</h3>
                                     </div>
                                     <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20 text-center">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-100 mb-1">Seu Turno é às</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-indigo-100 mb-1">Seu Turno é o <span className="text-amber-300">{PRAYER_SLOT_NAMES[stats.searchResult.slotNumber % 12]}</span> às</p>
                                         <p className="text-3xl font-black tabular-nums">{formatTime(stats.searchResult.slotNumber)}</p>
                                     </div>
                                 </div>
@@ -471,9 +472,14 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                                     {/* Glass reflection */}
                                     <div className="absolute top-0 left-0 right-0 h-[40%] bg-gradient-to-b from-white/10 to-transparent skew-y-[-10deg] transform -translate-y-10 group-hover:translate-y-[-20%] transition-transform duration-1000"></div>
 
-                                    <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${iconColor}`}>
-                                        {formatTime(slot.index)}
-                                    </span>
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">
+                                            {PRAYER_SLOT_NAMES[slot.index % 12]}
+                                        </span>
+                                        <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${iconColor}`}>
+                                            {formatTime(slot.index)}
+                                        </span>
+                                    </div>
 
                                     <div className="relative">
                                         <span className={`text-4xl font-black transition-colors tabular-nums tracking-tighter ${countColor}`}>

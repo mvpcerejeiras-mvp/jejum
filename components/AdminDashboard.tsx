@@ -6,7 +6,7 @@ import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, A
 import { supabase } from '../services/supabaseClient';
 import { processReminders } from '../services/reminders';
 import { sendWhatsAppMessage } from '../services/whatsapp';
-import { TIME_OPTIONS, TYPE_DESCRIPTIONS, DEFAULT_DAYS } from '../constants';
+import { TIME_OPTIONS, TYPE_DESCRIPTIONS, DEFAULT_DAYS, PRAYER_SLOT_NAMES } from '../constants';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -1020,7 +1020,7 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
                         <div key={hour} className="group flex flex-col">
                           <div className="flex justify-between items-center mb-1.5 px-0.5">
                             <span className="text-[11px] font-bold text-slate-400 tracking-wide group-hover:text-white transition-colors">
-                              {hour}
+                              {PRAYER_SLOT_NAMES[parseInt(hour.split(':')[0]) % 12]} - {hour}
                             </span>
                             <span className={`text-[10px] font-black ${isFull ? 'text-red-400' : 'text-blue-400'}`}>
                               {count}/10

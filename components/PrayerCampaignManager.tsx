@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Play, Pause, Clock, Users, Calendar, Edit2 } from 'lucide-react';
 import { createPrayerCampaign, getPrayerCampaigns, toggleCampaignStatus, deleteCampaign, getPrayerSignups, updatePrayerCampaign } from '../services/db';
 import { PrayerCampaign, PrayerSignup } from '../types';
+import { PRAYER_SLOT_NAMES } from '../constants';
 
 export function PrayerCampaignManager() {
     const [campaigns, setCampaigns] = useState<PrayerCampaign[]>([]);
@@ -155,9 +156,10 @@ export function PrayerCampaignManager() {
                         }
 
                         return (
-                            <div key={slot} className={`text-center p-1 rounded border text-[10px] flex flex-col items-center justify-center ${bgColor}`} title={`Horário ${getSlotTimeLabel(slot)} - ${count} pessoas`}>
+                            <div key={slot} className={`text-center p-1 rounded border text-[10px] flex flex-col items-center justify-center ${bgColor}`} title={`Turno ${PRAYER_SLOT_NAMES[slot % 12]} (${getSlotTimeLabel(slot)}) - ${count} pessoas`}>
                                 <span className="font-bold">{getSlotTimeLabel(slot)}</span>
-                                <span>{count}</span>
+                                <span className="opacity-70">{PRAYER_SLOT_NAMES[slot % 12]}</span>
+                                <span className="font-black">{count}</span>
                             </div>
                         )
                     })}
@@ -180,7 +182,10 @@ export function PrayerCampaignManager() {
                                 <tbody>
                                     {selectedSignups.sort((a, b) => a.slotNumber - b.slotNumber).map(s => (
                                         <tr key={s.id} className="border-b last:border-0 border-gray-100 dark:border-slate-800 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
-                                            <td className="py-1 font-mono text-indigo-600 dark:text-indigo-400 font-bold">{getSlotTimeLabel(s.slotNumber)}</td>
+                                            <td className="py-1 flex flex-col">
+                                                <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">{getSlotTimeLabel(s.slotNumber)}</span>
+                                                <span className="text-[10px] font-black uppercase text-slate-400">{PRAYER_SLOT_NAMES[s.slotNumber % 12]}</span>
+                                            </td>
                                             <td className="py-1 font-medium">{s.member?.name || 'Desconhecido'}</td>
 
                                             <td className="py-1">{s.member?.phone || '-'}</td>

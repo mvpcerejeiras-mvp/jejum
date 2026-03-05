@@ -71,3 +71,18 @@ export const TYPE_DESCRIPTIONS: FastTypeDescription[] = [
     ]
   }
 ];
+
+export const PRAYER_SLOT_NAMES = [
+  'Shalom',
+  'Rhema',
+  'Ágape',
+  'Logos',
+  'Kairós',
+  'El Shaddai',
+  'Adonai',
+  'Hosana',
+  'Aleluia',
+  'Maranata',
+  'Emmanuel',
+  'Shekinah'
+];

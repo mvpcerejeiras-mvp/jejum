@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParticipation } from '../../contexts/ParticipationContext';
 import { getPrayerCampaigns, getPrayerSignups } from '../../services/db';
 import { ArrowLeft, ArrowRight, Users, Flame } from 'lucide-react';
+import { PRAYER_SLOT_NAMES } from '../../constants';
 
 export function StepClock() {
     const { setStep, setClockData, participationData, appSettings, isAdmin } = useParticipation() as any;
@@ -215,6 +216,7 @@ export function StepClock() {
                                 {statusLabel}
                             </span>
                             <span className="text-lg font-bold">{getSlotTime(slot)}</span>
+                            <span className="text-[10px] font-black opacity-50 uppercase tracking-tighter -mt-1">{PRAYER_SLOT_NAMES[slot % 12]}</span>
                             <div className="flex items-center gap-1 text-xs opacity-70">
                                 <Users size={10} />
                                 <span className={isSelected ? 'text-white' : isFull ? 'text-red-500 font-bold' : isNearFull ? 'text-amber-400' : ''}>{count}</span>
