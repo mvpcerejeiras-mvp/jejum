@@ -215,16 +215,17 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
 
                 {/* Search My Schedule */}
                 <div className="max-w-xl mx-auto mb-16 animate-fade-in" style={{ animationDelay: '200ms' }}>
+                    <label className="block text-center text-indigo-600 text-[10px] font-black uppercase tracking-[0.4em] mb-4">Veja seu horário</label>
                     <div className="bg-white/80 backdrop-blur-2xl p-2 rounded-[2.5rem] border border-slate-200 shadow-xl flex items-center gap-2 group focus-within:ring-4 focus-within:ring-indigo-100 transition-all">
                         <div className="pl-6 text-slate-400">
                             <Users size={20} />
                         </div>
                         <input
                             type="text"
-                            placeholder="VEJA SEU HORÁRIO: Digite seu nome ou telefone..."
+                            placeholder="Digite seu nome ou telefone..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="flex-1 bg-transparent border-none focus:ring-0 text-slate-700 font-bold placeholder:text-slate-300 py-4"
+                            className="flex-1 bg-transparent border-none focus:ring-0 text-slate-700 font-bold placeholder:text-slate-400 py-4"
                         />
                         {searchQuery && (
                             <button
