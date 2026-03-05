@@ -429,8 +429,8 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                         </div>
                         <div className="flex items-center gap-8 bg-slate-100/80 p-5 px-10 rounded-full border border-slate-200 backdrop-blur-3xl shadow-sm">
                             <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 rounded-full bg-white border border-slate-300"></div>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Livre</span>
+                                <div className="w-3 h-3 rounded-full bg-[#f0fdf4] border border-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.4)]"></div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Livre</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.4)] animate-pulse"></div>
@@ -472,21 +472,21 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                                 cardClass = "bg-amber-50 border-amber-400 hover:border-amber-500 shadow-[0_4px_15px_rgba(245,158,11,0.2)] hover:scale-105 transition-all z-10";
                                 iconColor = "text-amber-600";
                                 countColor = "text-amber-800";
-                                statusText = "1 VAGA - CLIQUE AQUI";
+                                statusText = "1 Vaga";
                                 cursorClass = "cursor-pointer";
                                 onClickHandler = onJoin;
                             } else if (isEmpty) {
                                 cardClass = "bg-[#f0fdf4] border-emerald-400 hover:border-emerald-500 hover:bg-emerald-50 shadow-[0_4px_15px_rgba(52,211,153,0.3)] ring-2 ring-emerald-100 hover:scale-105 transition-all z-10";
                                 iconColor = "text-emerald-600";
                                 countColor = "text-emerald-800";
-                                statusText = `${slot.capacity} VAGAS - CLIQUE`;
+                                statusText = `${slot.capacity} Vagas`;
                                 cursorClass = "cursor-pointer";
                                 onClickHandler = onJoin;
                             } else if (isFilling) {
                                 cardClass = "bg-[#f0fdf4] border-emerald-400 hover:border-emerald-500 hover:bg-emerald-50 shadow-[0_4px_15px_rgba(52,211,153,0.3)] ring-2 ring-emerald-100 hover:scale-105 transition-all z-10";
                                 iconColor = "text-emerald-600";
                                 countColor = "text-emerald-800";
-                                statusText = `${slot.capacity - slot.count} VAGAS - CLIQUE`;
+                                statusText = `${slot.capacity - slot.count} Vagas`;
                                 cursorClass = "cursor-pointer";
                                 onClickHandler = onJoin;
                             }
@@ -521,7 +521,8 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                                     </div>
 
                                     <span className={`text-[8px] font-black uppercase whitespace-nowrap tracking-[0.2em] px-3 py-1.5 rounded-full border border-current opacity-90 shadow-sm transition-all group-hover:scale-105 group-hover:bg-white/50 ${iconColor}`}>
-                                        {statusText}
+                                        <span className="group-hover:hidden">{statusText}</span>
+                                        <span className="hidden group-hover:inline">{onClickHandler ? 'Clique' : statusText}</span>
                                     </span>
 
                                     {isCurrent && (
