@@ -95,7 +95,7 @@ const App: React.FC = () => {
   };
 
   if (view === 'public') {
-    return <PublicDashboard />;
+    return <PublicDashboard onJoin={() => setView('wizard')} />;
   }
 
   if (view === 'wizard') {
