@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { getPrayerCampaigns, getPrayerSignups } from '../services/db';
 import { PrayerCampaign, PrayerSignup } from '../types';
-import { Clock, Users, Calendar, Activity, Sparkles, Trophy, MousePointer2 } from 'lucide-react';
+import { Clock, Users, Calendar, Activity, Sparkles, Trophy, MousePointer2, AlertCircle } from 'lucide-react';
 import { PRAYER_SLOT_NAMES } from '../constants';
 
 interface PublicDashboardProps {
@@ -254,6 +254,23 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
                                         <p className="text-[10px] font-black uppercase tracking-widest text-indigo-100 mb-1">Seu Turno é o <span className="text-amber-300">{PRAYER_SLOT_NAMES[stats.searchResult.slotNumber % 12]}</span> às</p>
                                         <p className="text-3xl font-black tabular-nums">{formatTime(stats.searchResult.slotNumber)}</p>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* No Result Warning */}
+                    {searchQuery.length > 2 && !stats.searchResult && (
+                        <div className="mt-4 animate-fade-in-up">
+                            <div className="bg-red-500 p-6 rounded-[2.5rem] text-white shadow-2xl shadow-red-200 border border-red-400 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 group-hover:scale-110 transition-transform">
+                                    <AlertCircle size={80} />
+                                </div>
+                                <div className="relative z-10 flex flex-col items-center justify-center text-center px-4">
+                                    <p className="text-red-100 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Ops! Não te achamos 🥺</p>
+                                    <h3 className="text-lg md:text-xl font-bold tracking-tight">
+                                        É crente, ainda não escolheu um horario de oração! Clique em <button onClick={onJoin} className="font-black underline decoration-red-300 underline-offset-4 hover:text-red-100 transition-colors">quero participar</button> e escolha um horario para orar Crente! Toma tipo!
+                                    </h3>
                                 </div>
                             </div>
                         </div>
