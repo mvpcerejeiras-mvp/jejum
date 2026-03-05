@@ -85,19 +85,24 @@ export default function PublicDashboard({ onJoin }: PublicDashboardProps) {
 
         const currentSlotIndex = (diffHours >= 0 && diffHours < campaign.duration) ? diffHours : -1;
 
-        const slotCounts = slots.map(s => {
-            const count = signups.filter(su => su.slotNumber === s).length;
-            // Lógica de Vagas Dinâmicas: Começa em 5, aumenta +3 sempre que lotar
-            const baseCapacity = 5;
-            let capacity = baseCapacity;
-            while (count >= capacity) {
-                capacity += 3;
-            }
+        // Lógica de Vagas Dinâmicas: Começa em 5, aumenta +3 para TODOS somente quando TODOS os horários estiverem cheios
+        const baseCapacity = 5;
+        let globalCapacity = baseCapacity;
+
+        // Calculamos os inscritos brutos por slot primeiro
+        const rawCounts = slots.map(s => signups.filter(su => su.slotNumber === s).length);
+
+        // Aumentamos a capacidade global enquanto TODOS os slots estiverem preenchidos até o limite atual
+        while (rawCounts.every(count => count >= globalCapacity)) {
+            globalCapacity += 3;
+        }
+
+        const slotCounts = slots.map((s, i) => {
             return {
                 index: s,
-                count,
-                capacity,
-                isFull: false // Removido o conceito de "bloqueado", agora sempre abre +3
+                count: rawCounts[i],
+                capacity: globalCapacity,
+                isFull: false
             };
         });
 
