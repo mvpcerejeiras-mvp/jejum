@@ -1162,6 +1162,7 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
                         const config = await getSystemConfig();
                         setSystemConfig(config as any);
                         alert('Modo "Apenas Jejum" ativado!');
+                        window.location.reload();
                       }
                     }}
                     className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'fasting' ? 'border-white bg-white/20 shadow-inner' : 'border-indigo-400 bg-white/5 hover:bg-white/10'}`}
@@ -1176,6 +1177,7 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
                         const config = await getSystemConfig();
                         setSystemConfig(config as any);
                         alert('Modo "Apenas Relógio" ativado!');
+                        window.location.reload();
                       }
                     }}
                     className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'prayer_clock' ? 'border-white bg-white/20 shadow-inner' : 'border-indigo-400 bg-white/5 hover:bg-white/10'}`}
@@ -1190,6 +1192,7 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
                         const config = await getSystemConfig();
                         setSystemConfig(config as any);
                         alert('Modo "Combo" ativado!');
+                        window.location.reload();
                       }
                     }}
                     className={`p-4 rounded-lg border-2 text-left transition-all ${systemConfig?.eventMode === 'combined' ? 'border-white bg-white shadow-md text-indigo-700 font-black' : 'border-indigo-300 bg-white/10 hover:bg-white/20'}`}

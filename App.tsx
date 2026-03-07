@@ -23,7 +23,7 @@ const App: React.FC = () => {
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const { user, hasParticipated, getGreeting, setStep, setIsAdmin, isAdmin } = useParticipation() as any;
+  const { user, hasParticipated, getGreeting, setStep, setIsAdmin, isAdmin, config } = useParticipation() as any;
 
   // Initialize Dark Mode based on localStorage or System Preference
   useEffect(() => {
@@ -179,7 +179,15 @@ const App: React.FC = () => {
               ) : (
                 /* Unified Wizard Entry Point - Participation Aware */
                 <div
-                  onClick={() => setView('wizard')}
+                  onClick={() => {
+                    if (user) {
+                      const mode = config?.eventMode;
+                      setStep(mode === 'prayer_clock' ? 3 : 1);
+                    } else {
+                      setStep(0);
+                    }
+                    setView('wizard');
+                  }}
                   className="cta-shine-effect bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-700 rounded-2xl p-7 text-white cursor-pointer shadow-2xl shadow-indigo-500/40 hover:scale-[1.03] transition-all duration-300 group relative border border-white/10"
                 >
                   {/* Decorative background blobs */}
@@ -218,7 +226,11 @@ const App: React.FC = () => {
 
               {user && (
                 <HomeDashboard
-                  onJoin={() => setView('wizard')}
+                  onJoin={() => {
+                    const mode = config?.eventMode;
+                    setStep(mode === 'prayer_clock' ? 3 : 1);
+                    setView('wizard');
+                  }}
                   onViewSchedule={() => setView('schedule')}
                   onViewClock={() => {
                     setStep(3); // Clock step
