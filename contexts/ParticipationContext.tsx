@@ -26,6 +26,7 @@ interface ParticipationContextType {
     setJustSaved: (val: boolean) => void;
     isAdmin: boolean;
     setIsAdmin: (val: boolean) => void;
+    getInitialStep: () => number;
 }
 
 const ParticipationContext = createContext<ParticipationContextType | undefined>(undefined);
@@ -84,6 +85,11 @@ export function ParticipationProvider({ children }: { children: React.ReactNode 
                 time: data.fasting.time
             });
         }
+    };
+
+    const getInitialStep = () => {
+        const mode = config?.eventMode || config?.event_mode;
+        return mode === 'prayer_clock' ? 3 : 1;
     };
 
     const login = async (phone: string): Promise<{ success: boolean; message?: string; isNewUser?: boolean; member?: Member }> => {
@@ -156,10 +162,11 @@ export function ParticipationProvider({ children }: { children: React.ReactNode 
             justSaved,
             setJustSaved,
             isAdmin,
-            setIsAdmin
+            setIsAdmin,
+            getInitialStep
         }}>
             {children}
-        </ParticipationContext.Provider>
+        </ParticipationContext.Provider >
     );
 }
 

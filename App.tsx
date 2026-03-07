@@ -23,7 +23,7 @@ const App: React.FC = () => {
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const { user, hasParticipated, getGreeting, setStep, setIsAdmin, isAdmin, config } = useParticipation() as any;
+  const { user, hasParticipated, getGreeting, setStep, setIsAdmin, isAdmin, config, getInitialStep } = useParticipation() as any;
 
   // Initialize Dark Mode based on localStorage or System Preference
   useEffect(() => {
@@ -181,8 +181,7 @@ const App: React.FC = () => {
                 <div
                   onClick={() => {
                     if (user) {
-                      const mode = config?.eventMode;
-                      setStep(mode === 'prayer_clock' ? 3 : 1);
+                      setStep(getInitialStep());
                     } else {
                       setStep(0);
                     }
@@ -227,8 +226,7 @@ const App: React.FC = () => {
               {user && (
                 <HomeDashboard
                   onJoin={() => {
-                    const mode = config?.eventMode;
-                    setStep(mode === 'prayer_clock' ? 3 : 1);
+                    setStep(getInitialStep());
                     setView('wizard');
                   }}
                   onViewSchedule={() => setView('schedule')}

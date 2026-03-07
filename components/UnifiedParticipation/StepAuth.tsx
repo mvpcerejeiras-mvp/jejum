@@ -3,7 +3,7 @@ import { useParticipation } from '../../contexts/ParticipationContext';
 import { Phone, User, ArrowRight, Loader } from 'lucide-react';
 
 export function StepAuth() {
-    const { login, register, setStep, config } = useParticipation();
+    const { login, register, setStep, setParticipationData, config, getInitialStep } = useParticipation() as any;
     const [phone, setPhone] = useState('');
     const [name, setName] = useState('');
     const [welcomeName, setWelcomeName] = useState('');
@@ -40,12 +40,10 @@ export function StepAuth() {
                     // Check if they already participated (already loaded by login call in context)
                     // If so, they might want to just go to the dashboard
                     setTimeout(() => {
-                        const nextStep = config?.eventMode === 'prayer_clock' ? 3 : 1;
-                        setStep(nextStep);
+                        setStep(getInitialStep());
                     }, 1500);
                 } else {
-                    const nextStep = config?.eventMode === 'prayer_clock' ? 3 : 1;
-                    setStep(nextStep);
+                    setStep(getInitialStep());
                 }
             }
         } else {
@@ -65,13 +63,7 @@ export function StepAuth() {
         setLoading(false);
 
         if (res.success) {
-            // Priority navigation based on mode
-            const mode = config?.eventMode;
-            if (mode === 'prayer_clock') {
-                setStep(3);
-            } else {
-                setStep(1);
-            }
+            setStep(getInitialStep());
         } else {
             setError(res.message || 'Erro ao cadastrar.');
         }

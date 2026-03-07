@@ -92,5 +92,6 @@ export interface PrayerSignup {
 export interface SystemConfig {
   id?: string;
   eventMode: 'fasting' | 'prayer_clock' | 'combined'; // Modes: only fasting, only clock, or both
+  event_mode?: 'fasting' | 'prayer_clock' | 'combined'; // Alias for safety
   activeCampaignId?: string; // Optional: Force a specific campaign if multiple active
 }

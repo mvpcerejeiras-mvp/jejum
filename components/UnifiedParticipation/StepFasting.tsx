@@ -34,10 +34,8 @@ export function StepFasting() {
 
     // Fallback: If someone lands here but the mode is only prayer clock, skip
     React.useEffect(() => {
-        if (config?.eventMode === 'prayer_clock') {
-            setStep(3);
-        }
-    }, [config?.eventMode, setStep]);
+        // Redundant redirect removed as navigation is now handled centrally
+    }, []);
 
     const handleNext = () => {
         if (selectedDays.length === 0 || !selectedType || !selectedTime) return;

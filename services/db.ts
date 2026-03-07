@@ -3,19 +3,24 @@ import { supabase } from './supabaseClient';
 import { Participant, AppSettings, Member, FastingHistory, PrayerCampaign, PrayerSignup, SystemConfig } from '../types';
 import { DEFAULT_INSTRUCTION, DEFAULT_THEME, DEFAULT_APP_TITLE, DEFAULT_LOGO, DEFAULT_DAYS } from '../constants';
 
-export const getSystemConfig = async (): Promise<{ eventMode: 'fasting' | 'prayer_clock' | 'combined', totalViews?: number }> => {
+export const getSystemConfig = async (): Promise<any> => {
   const { data, error } = await supabase
     .from('system_config')
-    .select('event_mode, total_views')
+    .select('*')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (error || !data) {
-    return { eventMode: 'fasting', totalViews: 0 };
+    return { eventMode: 'fasting', event_mode: 'fasting', totalViews: 0 };
   }
 
-  return { eventMode: data.event_mode as any, totalViews: data.total_views || 0 };
+  return {
+    ...data,
+    eventMode: data.event_mode,
+    event_mode: data.event_mode,
+    totalViews: data.total_views || 0
+  };
 };
 
 export const incrementPageViews = async (): Promise<{ success: boolean }> => {
