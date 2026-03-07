@@ -1,5 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, FastForward, ChevronRight, CheckCircle2, Clock, Settings, X, Save, RefreshCw, Moon, Sun, Users, Share2, Check } from 'lucide-react';
+import {
+    Play, Pause, RotateCcw, FastForward, ChevronRight, CheckCircle2, Clock, Settings, X, Save, RefreshCw, Moon, Sun, Users, Share2, Check,
+    BookOpen, Brain, Sparkles, ShieldCheck, Heart, Zap, Mountain, CheckCircle, Mic2, Smile, Star
+} from 'lucide-react';
+
+// Mapeamento de Ícones por ID de Tópico
+const topicIcons: Record<number, React.ReactNode> = {
+    1: <Brain className="w-6 h-6" />,
+    2: <Sun className="w-6 h-6" />,
+    3: <Sparkles className="w-6 h-6" />,
+    4: <ShieldCheck className="w-6 h-6" />,
+    5: <Heart className="w-6 h-6" />,
+    6: <Zap className="w-6 h-6" />,
+    7: <Mountain className="w-6 h-6" />,
+    8: <BookOpen className="w-6 h-6" />,
+    9: <CheckCircle className="w-6 h-6" />,
+    10: <Mic2 className="w-6 h-6" />,
+    11: <Smile className="w-6 h-6" />,
+    12: <Star className="w-6 h-6" />,
+};
 
 // Escala de Equipes por Hora
 const teamSchedule: Record<number, string> = {
@@ -208,8 +227,6 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
         const saved = localStorage.getItem('prayerData');
         const data = saved ? JSON.parse(saved) : defaultPrayerData;
 
-        // Pequena verificação: se o título do primeiro tópico for o antigo "GRATIDÃO A DEUS",
-        // forçamos o reset para os novos dados fornecidos hoje.
         if (data[0]?.title === "GRATIDÃO A DEUS") {
             localStorage.removeItem('prayerData');
             return defaultPrayerData;
@@ -217,6 +234,7 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
         return data;
     });
     const [isEditing, setIsEditing] = useState(false);
+    const [showPurposesList, setShowPurposesList] = useState(false);
 
     const [isDarkMode, setIsDarkMode] = useState(() => {
         const saved = localStorage.getItem('darkMode');
@@ -226,14 +244,13 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
         return window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
 
-    const [timeElapsed, setTimeElapsed] = useState(0); // Segundos passados (0 a 3600)
+    const [timeElapsed, setTimeElapsed] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
-    const [speedMultiplier, setSpeedMultiplier] = useState(1); // Para testes rápidos
+    const [speedMultiplier, setSpeedMultiplier] = useState(1);
     const [isPersonalMode, setIsPersonalMode] = useState(false);
 
     const [currentTime, setCurrentTime] = useState(new Date());
 
-    // Lógica de Data e Hora para o Evento Ao Vivo (Domingo 06:00 às 18:00)
     const isSunday = currentTime.getDay() === 0;
     const currentHour24 = currentTime.getHours();
     const isLive = isSunday && currentHour24 >= 6 && currentHour24 < 18;
@@ -259,9 +276,8 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
     const m = Math.floor((diffMs / 1000 / 60) % 60);
     const s = Math.floor((diffMs / 1000) % 60);
 
-    const MAX_SECONDS = 3600; // 1 Hora
+    const MAX_SECONDS = 3600;
 
-    // Atualizar a hora atual a cada segundo e sincronizar se estiver Ao Vivo
     useEffect(() => {
         const interval = setInterval(() => {
             const now = new Date();
@@ -279,7 +295,6 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
         return () => clearInterval(interval);
     }, [isPersonalMode]);
 
-    // Loop do Timer Manual
     useEffect(() => {
         let interval: ReturnType<typeof setInterval>;
         if (isPlaying && timeElapsed < MAX_SECONDS && (!isLive || isPersonalMode)) {
@@ -297,12 +312,10 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
         return () => clearInterval(interval);
     }, [isPlaying, timeElapsed, speedMultiplier]);
 
-    // Salvar dados no localStorage
     useEffect(() => {
         localStorage.setItem('prayerData', JSON.stringify(prayerData));
     }, [prayerData]);
 
-    // Aplicar e salvar dark mode
     useEffect(() => {
         localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
         if (isDarkMode) {
@@ -312,12 +325,10 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
         }
     }, [isDarkMode]);
 
-    // Pausar ao abrir configurações
     useEffect(() => {
-        if (isEditing) setIsPlaying(false);
-    }, [isEditing]);
+        if (isEditing || showPurposesList) setIsPlaying(false);
+    }, [isEditing, showPurposesList]);
 
-    // Funções de edição
     const handleUpdateTitle = (topicIndex: number, newTitle: string) => {
         const newData = [...prayerData];
         newData[topicIndex].title = newTitle;
@@ -336,15 +347,13 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
         }
     };
 
-    // Cálculos de tempo e posição
-    const currentMinute = Math.min(Math.floor(timeElapsed / 60), 59); // 0 a 59
-    const activeTopicIndex = Math.floor(currentMinute / 5); // 0 a 11
-    const activeSubTopicIndex = currentMinute % 5; // 0 a 4
+    const currentMinute = Math.min(Math.floor(timeElapsed / 60), 59);
+    const activeTopicIndex = Math.floor(currentMinute / 5);
+    const activeSubTopicIndex = currentMinute % 5;
     const isFinished = timeElapsed >= MAX_SECONDS;
 
     const currentTopic = isFinished ? null : prayerData[activeTopicIndex];
 
-    // Formatador de tempo (MM:SS)
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60).toString().padStart(2, '0');
         const s = (seconds % 60).toString().padStart(2, '0');
@@ -353,6 +362,7 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
 
     const handleWedgeClick = (index: number) => {
         setTimeElapsed(index * 5 * 60);
+        setShowPurposesList(false);
     };
 
     return (
@@ -361,9 +371,9 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
             <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 transition-colors duration-300">
                 <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex items-center gap-3">
-                        {isAdmin && onBack && (
+                        {((isAdmin && onBack) || showPurposesList) && (
                             <button
-                                onClick={onBack}
+                                onClick={showPurposesList ? () => setShowPurposesList(false) : onBack}
                                 className="p-2 mr-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center shadow-sm"
                             >
                                 <X size={20} />
@@ -399,6 +409,14 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
 
                     {/* Controles Principais */}
                     <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-full border border-slate-200 dark:border-slate-700 transition-colors duration-300">
+                        <button
+                            onClick={() => setShowPurposesList(!showPurposesList)}
+                            className={`p-2 rounded-full transition-colors ${showPurposesList ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+                            title="Ver Propósitos de Oração"
+                        >
+                            <BookOpen className="w-5 h-5" />
+                        </button>
+
                         <button
                             onClick={() => setIsDarkMode(!isDarkMode)}
                             className="p-2 rounded-full text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
@@ -518,6 +536,70 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
                             ))}
                         </div>
                     </section>
+                ) : showPurposesList ? (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+                        <div className="text-center mb-12">
+                            <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4">
+                                Propósitos de Oração
+                            </h2>
+                            <p className="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-lg font-medium">
+                                Explore os 12 temas e 60 motivos de intercessão do nosso Relógio de Oração.
+                                Clique em um card para focar sua oração nele.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {prayerData.map((topic: any, idx: number) => (
+                                <div
+                                    key={topic.id}
+                                    onClick={() => handleWedgeClick(idx)}
+                                    className="group cursor-pointer relative overflow-hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] p-8 shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                                >
+                                    <div
+                                        className="absolute top-0 left-0 w-full h-2"
+                                        style={{ backgroundColor: topic.blockColor }}
+                                    />
+
+                                    <div className="flex items-start justify-between mb-6">
+                                        <div
+                                            className="p-4 rounded-2xl text-slate-800 shadow-inner transition-transform duration-500 group-hover:rotate-12 group-hover:scale-110"
+                                            style={{ backgroundColor: topic.color }}
+                                        >
+                                            {topicIcons[topic.id]}
+                                        </div>
+                                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-900/50 px-3 py-1.5 rounded-full">
+                                            TEMPO {topic.id}
+                                        </span>
+                                    </div>
+
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-6 leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                        {topic.title}
+                                    </h3>
+
+                                    <div className="space-y-4">
+                                        {topic.items.map((item: string, i: number) => (
+                                            <div key={i} className="flex gap-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                                                <div className="mt-1.5 w-2 h-2 rounded-full bg-blue-500/20 dark:bg-blue-400/20 flex items-center justify-center shrink-0">
+                                                    <div className="w-1 h-1 rounded-full bg-blue-500 dark:bg-blue-400" />
+                                                </div>
+                                                <span>{item}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                                        <span className="text-sm font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                                            Iniciar Este Período <ChevronRight size={16} />
+                                        </span>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{topic.block.split(' - ')[0]}</span>
+                                    </div>
+
+                                    {/* Sub-efeito de brilho no hover */}
+                                    <div className="absolute -right-20 -bottom-20 w-40 h-40 bg-blue-500/5 dark:bg-blue-400/5 rounded-full blur-3xl group-hover:bg-blue-500/10 dark:group-hover:bg-blue-400/10 transition-colors duration-500" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 ) : (!isLive && !isPersonalMode) ? (
                     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-fade-in duration-700">
                         <div className="text-center space-y-2">
@@ -851,6 +933,6 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
                     </div>
                 )}
             </main>
-        </div>
+        </div >
     );
 }
