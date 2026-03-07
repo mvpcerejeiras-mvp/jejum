@@ -40,11 +40,11 @@ export function StepAuth() {
                     // Check if they already participated (already loaded by login call in context)
                     // If so, they might want to just go to the dashboard
                     setTimeout(() => {
-                        const nextStep = config?.eventMode === 'prayer_clock' ? 2 : 1;
+                        const nextStep = config?.eventMode === 'prayer_clock' ? 3 : 1;
                         setStep(nextStep);
                     }, 1500);
                 } else {
-                    const nextStep = config?.eventMode === 'prayer_clock' ? 2 : 1;
+                    const nextStep = config?.eventMode === 'prayer_clock' ? 3 : 1;
                     setStep(nextStep);
                 }
             }
@@ -65,7 +65,7 @@ export function StepAuth() {
         setLoading(false);
 
         if (res.success) {
-            const nextStep = (useParticipation() as any).config?.eventMode === 'prayer_clock' ? 2 : 1;
+            const nextStep = config?.eventMode === 'prayer_clock' ? 3 : 1;
             setStep(nextStep);
         } else {
             setError(res.message || 'Erro ao cadastrar.');
@@ -137,7 +137,9 @@ export function StepAuth() {
         <div className="animate-fade-in-up space-y-6">
             <div className="text-center">
                 <h2 className="text-3xl font-bold text-white mb-2">Bem-vindo(a)!</h2>
-                <p className="text-slate-300">Digite seu WhatsApp para acessar a área de jejum e oração.</p>
+                <p className="text-slate-300">
+                    Digite seu WhatsApp para acessar ou fazer seu cadastro.
+                </p>
             </div>
 
             <form onSubmit={handlePhoneSubmit} className="space-y-6">
@@ -163,7 +165,7 @@ export function StepAuth() {
                     disabled={loading || phone.length < 14}
                     className="w-full bg-white text-slate-900 font-bold py-4 rounded-xl shadow-lg hover:bg-slate-100 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {loading ? <Loader className="animate-spin text-slate-900" /> : <>Entrar <ArrowRight size={20} /></>}
+                    {loading ? <Loader className="animate-spin text-slate-900" /> : <>Acessar / Cadastrar <ArrowRight size={20} /></>}
                 </button>
             </form>
 
