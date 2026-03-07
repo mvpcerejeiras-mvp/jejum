@@ -65,8 +65,13 @@ export function StepAuth() {
         setLoading(false);
 
         if (res.success) {
-            const nextStep = config?.eventMode === 'prayer_clock' ? 3 : 1;
-            setStep(nextStep);
+            // Priority navigation based on mode
+            const mode = config?.eventMode;
+            if (mode === 'prayer_clock') {
+                setStep(3);
+            } else {
+                setStep(1);
+            }
         } else {
             setError(res.message || 'Erro ao cadastrar.');
         }
