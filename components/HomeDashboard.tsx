@@ -8,11 +8,12 @@ interface HomeDashboardProps {
   onJoin: () => void;
   onViewSchedule: () => void;
   onViewClock: () => void;
+  onViewInteractiveClock?: () => void;
   fastDays: string[];
   appSettings: AppSettings;
 }
 
-const HomeDashboard: React.FC<HomeDashboardProps> = ({ onJoin, onViewSchedule, onViewClock, fastDays, appSettings }) => {
+const HomeDashboard: React.FC<HomeDashboardProps> = ({ onJoin, onViewSchedule, onViewClock, onViewInteractiveClock, fastDays, appSettings }) => {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [animateBars, setAnimateBars] = useState(false);
 
@@ -94,6 +95,15 @@ const HomeDashboard: React.FC<HomeDashboardProps> = ({ onJoin, onViewSchedule, o
               <Clock size={18} />
               <span>{appSettings.prayerClockTitle || 'Relógio'}</span>
             </button>
+            {onViewInteractiveClock && (
+              <button
+                onClick={onViewInteractiveClock}
+                className="flex items-center justify-center gap-2 bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 px-5 py-2.5 rounded-xl font-medium border border-indigo-100 dark:border-indigo-900/50 hover:bg-indigo-50 dark:hover:bg-slate-600 transition-all hover:scale-105 active:scale-95"
+              >
+                <Zap size={18} />
+                <span>Interativo</span>
+              </button>
+            )}
             <button
               onClick={onJoin}
               className="flex items-center justify-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-medium shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-all hover:scale-105 active:scale-95"

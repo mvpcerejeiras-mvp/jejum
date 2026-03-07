@@ -9,9 +9,10 @@ import { DEFAULT_THEME, DEFAULT_INSTRUCTION, DEFAULT_APP_TITLE, DEFAULT_LOGO, DE
 import { Flame, Lock, Cross, BookOpen, Heart, Sun, Mountain, Star, Moon, Sparkles } from 'lucide-react';
 import { useParticipation } from './contexts/ParticipationContext';
 import { Wizard } from './components/UnifiedParticipation/Wizard';
+import InteractivePrayerClock from './components/InteractivePrayerClock';
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'home' | 'form' | 'admin' | 'login' | 'schedule' | 'clock' | 'wizard' | 'public'>('home');
+  const [view, setView] = useState<'home' | 'form' | 'admin' | 'login' | 'schedule' | 'clock' | 'wizard' | 'public' | 'interactive-clock'>('home');
   const [password, setPassword] = useState('');
   const [appSettings, setAppSettings] = useState({
     theme: DEFAULT_THEME,
@@ -41,6 +42,8 @@ const App: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('v') === 'public') {
       setView('public');
+    } else if (params.get('v') === 'relogio') {
+      setView('interactive-clock');
     }
   }, []);
 
@@ -221,6 +224,7 @@ const App: React.FC = () => {
                     setStep(3); // Clock step
                     setView('wizard');
                   }}
+                  onViewInteractiveClock={() => setView('interactive-clock')}
                   fastDays={appSettings.fastDays}
                   appSettings={appSettings}
                 />
@@ -302,6 +306,18 @@ const App: React.FC = () => {
           )}
 
           {view === 'public' && <PublicDashboard onJoin={() => setView('wizard')} />}
+
+          {view === 'interactive-clock' && (
+            <InteractivePrayerClock onBack={() => {
+              // Remove the ?v=relogio from URL if it exists
+              const url = new URL(window.location.href);
+              if (url.searchParams.has('v')) {
+                url.searchParams.delete('v');
+                window.history.replaceState({}, '', url.toString());
+              }
+              setView('home');
+            }} />
+          )}
 
         </div>
 
