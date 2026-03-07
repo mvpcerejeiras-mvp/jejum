@@ -131,7 +131,7 @@ const describeOuterArc = (x: number, y: number, innerRadius: number, outerRadius
     ].join(" ");
 };
 
-export default function InteractivePrayerClock({ onBack }: { onBack?: () => void }) {
+export default function InteractivePrayerClock({ onBack, isAdmin = false }: { onBack?: () => void, isAdmin?: boolean }) {
     const [prayerData, setPrayerData] = useState(() => {
         const saved = localStorage.getItem('prayerData');
         return saved ? JSON.parse(saved) : defaultPrayerData;
@@ -281,7 +281,7 @@ export default function InteractivePrayerClock({ onBack }: { onBack?: () => void
             <header className="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 transition-colors duration-300">
                 <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex items-center gap-3">
-                        {onBack && (
+                        {isAdmin && onBack && (
                             <button
                                 onClick={onBack}
                                 className="p-2 mr-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center shadow-sm"
@@ -326,28 +326,33 @@ export default function InteractivePrayerClock({ onBack }: { onBack?: () => void
                         >
                             {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </button>
-                        <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1"></div>
-                        <button
-                            onClick={() => setIsEditing(!isEditing)}
-                            className={`p-2 rounded-full transition-colors ${isEditing ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
-                            title="Configurações"
-                        >
-                            {isEditing ? <X className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
-                        </button>
-                        <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1"></div>
+
+                        {isAdmin && (
+                            <>
+                                <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1"></div>
+                                <button
+                                    onClick={() => setIsEditing(!isEditing)}
+                                    className={`p-2 rounded-full transition-colors ${isEditing ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
+                                    title="Configurações"
+                                >
+                                    {isEditing ? <X className="w-5 h-5" /> : <Settings className="w-5 h-5" />}
+                                </button>
+                                <div className="w-px h-6 bg-slate-300 dark:bg-slate-700 mx-1"></div>
+                            </>
+                        )}
 
                         {isLive && !isPersonalMode ? (
                             <div className="flex items-center gap-2 px-4 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full font-bold animate-pulse border border-red-200 dark:border-red-800/30 shadow-sm text-sm">
                                 <div className="w-2 h-2 bg-red-600 dark:bg-red-400 rounded-full"></div>
                                 AO VIVO
                             </div>
-                        ) : (
+                        ) : isAdmin ? (
                             <>
                                 <button
                                     onClick={() => setIsPlaying(!isPlaying)}
                                     disabled={isFinished || isEditing}
                                     className={`flex items-center gap-2 px-5 py-2 rounded-full font-semibold transition-all ${(isFinished || isEditing) ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed' :
-                                            isPlaying ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/70' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                                        isPlaying ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 hover:bg-amber-200 dark:hover:bg-amber-900/70' : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
                                         }`}
                                 >
                                     {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
@@ -361,7 +366,7 @@ export default function InteractivePrayerClock({ onBack }: { onBack?: () => void
                                     <RotateCcw className="w-5 h-5" />
                                 </button>
                             </>
-                        )}
+                        ) : null}
                     </div>
                 </div>
             </header>
@@ -462,12 +467,14 @@ export default function InteractivePrayerClock({ onBack }: { onBack?: () => void
                             ))}
                         </div>
 
-                        <button
-                            onClick={() => setIsPersonalMode(true)}
-                            className="mt-8 px-6 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors"
-                        >
-                            Usar relógio no modo pessoal
-                        </button>
+                        {isAdmin && (
+                            <button
+                                onClick={() => setIsPersonalMode(true)}
+                                className="mt-8 px-6 py-2 text-sm font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition-colors"
+                            >
+                                Usar relógio no modo pessoal
+                            </button>
+                        )}
                     </div>
                 ) : (
                     <div className="flex flex-col lg:flex-row gap-8 lg:items-start items-center animate-fade-in duration-700">
@@ -617,7 +624,7 @@ export default function InteractivePrayerClock({ onBack }: { onBack?: () => void
                                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400 text-center max-w-sm">
                                         O relógio está sincronizado automaticamente com o horário oficial da intercessão.
                                     </p>
-                                ) : (
+                                ) : isAdmin ? (
                                     <>
                                         <div className="flex items-center gap-4 text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-2 rounded-xl transition-colors">
                                             <span className="text-slate-500 dark:text-slate-400 font-medium px-2">Velocidade:</span>
@@ -647,7 +654,7 @@ export default function InteractivePrayerClock({ onBack }: { onBack?: () => void
                                             </button>
                                         )}
                                     </>
-                                )}
+                                ) : null}
                             </div>
                         </section>
 
@@ -703,8 +710,8 @@ export default function InteractivePrayerClock({ onBack }: { onBack?: () => void
                                                         <div
                                                             key={index}
                                                             className={`relative overflow-hidden flex flex-col p-4 rounded-2xl transition-all duration-300 ${isActive
-                                                                    ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 shadow-md transform scale-[1.02] z-10'
-                                                                    : 'bg-slate-50 dark:bg-slate-800/50 border border-transparent'
+                                                                ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700 shadow-md transform scale-[1.02] z-10'
+                                                                : 'bg-slate-50 dark:bg-slate-800/50 border border-transparent'
                                                                 }`}
                                                         >
                                                             {/* Progress bar for active minute */}
@@ -717,13 +724,13 @@ export default function InteractivePrayerClock({ onBack }: { onBack?: () => void
 
                                                             <div className="flex items-center gap-4 relative z-10">
                                                                 <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm shrink-0 ${isActive ? 'bg-blue-600 text-white shadow-sm' :
-                                                                        isPast ? 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400' : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
+                                                                    isPast ? 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400' : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
                                                                     }`}>
                                                                     {index + 1}
                                                                 </div>
 
                                                                 <div className={`flex-1 text-lg font-medium ${isActive ? 'text-blue-900 dark:text-blue-100 font-bold' :
-                                                                        isPast ? 'text-slate-500 dark:text-slate-400 line-through decoration-slate-300 dark:decoration-slate-600' : 'text-slate-600 dark:text-slate-300'
+                                                                    isPast ? 'text-slate-500 dark:text-slate-400 line-through decoration-slate-300 dark:decoration-slate-600' : 'text-slate-600 dark:text-slate-300'
                                                                     }`}>
                                                                     {item}
                                                                 </div>

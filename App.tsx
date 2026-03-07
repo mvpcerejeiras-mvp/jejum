@@ -23,7 +23,7 @@ const App: React.FC = () => {
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const { user, hasParticipated, getGreeting, setStep, setIsAdmin } = useParticipation() as any;
+  const { user, hasParticipated, getGreeting, setStep, setIsAdmin, isAdmin } = useParticipation() as any;
 
   // Initialize Dark Mode based on localStorage or System Preference
   useEffect(() => {
@@ -308,15 +308,17 @@ const App: React.FC = () => {
           {view === 'public' && <PublicDashboard onJoin={() => setView('wizard')} />}
 
           {view === 'interactive-clock' && (
-            <InteractivePrayerClock onBack={() => {
-              // Remove the ?v=relogio from URL if it exists
-              const url = new URL(window.location.href);
-              if (url.searchParams.has('v')) {
-                url.searchParams.delete('v');
-                window.history.replaceState({}, '', url.toString());
-              }
-              setView('home');
-            }} />
+            <InteractivePrayerClock
+              isAdmin={isAdmin}
+              onBack={() => {
+                // Remove the ?v=relogio from URL if it exists
+                const url = new URL(window.location.href);
+                if (url.searchParams.has('v')) {
+                  url.searchParams.delete('v');
+                  window.history.replaceState({}, '', url.toString());
+                }
+                setView('home');
+              }} />
           )}
 
         </div>
