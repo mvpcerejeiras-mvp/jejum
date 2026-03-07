@@ -20,76 +20,148 @@ const teamSchedule: Record<number, string> = {
 // Dados extraídos da imagem fornecida
 const defaultPrayerData = [
     {
-        id: 1, title: "GRATIDÃO A DEUS",
+        id: 1, title: "MENTE PARA GOVERNAR, CORAÇÃO PARA SERVIR",
         block: "BLOCO 01 - RELAÇÃO COM DEUS",
         color: "#d4f0b3", blockColor: "#a3d977",
-        items: ["Por sua soberania", "Por seu amor", "Por sua bondade", "Por sua sabedoria", "Por sua graça"]
+        items: [
+            "Sabedoria do alto para governar com discernimento espiritual",
+            "Líderes com espírito de servo, não de posição",
+            "Mente renovada pela Palavra em toda a liderança",
+            "Decisões ministeriais guiadas pelo Espírito Santo",
+            "Geração que governa com humildade e temor ao Senhor"
+        ]
     },
     {
-        id: 2, title: "CONFISSÃO DE PECADOS",
+        id: 2, title: "LEVANTAR-SE E RESPLANDECER",
         block: "BLOCO 01 - RELAÇÃO COM DEUS",
         color: "#c7e8a9", blockColor: "#a3d977",
-        items: ["Pecados de ação", "Pecados de omissão", "Pecados de língua", "Pecados ocultos", "Pecados de estimação"]
+        items: [
+            "Que a igreja se levante espiritualmente nesta geração",
+            "Cidade impactada pela luz do Evangelho",
+            "Jovens e adolescentes como testemunhas de Cristo",
+            "Famílias sendo luz em seus bairros e trabalhos",
+            "Que a glória do Senhor seja vista sobre a igreja"
+        ]
     },
     {
-        id: 3, title: "VIDA COM DEUS",
+        id: 3, title: "TORNANDO SONHOS EM REALIDADE",
         block: "BLOCO 01 - RELAÇÃO COM DEUS",
         color: "#b9e09d", blockColor: "#a3d977",
-        items: ["Intimidade com Deus", "Fome espiritual", "Avivamento pessoal", "Maturidade", "Profundidade"]
+        items: [
+            "Deus cumpra os propósitos plantados no coração da igreja",
+            "Projetos ministeriais prosperem segundo a vontade de Deus",
+            "Jovens descubram seu chamado e destino em Deus",
+            "Que Deus abra portas que ninguém pode fechar",
+            "Sonhos gerados no Espírito se tornem realidade no tempo certo"
+        ]
     },
     {
-        id: 4, title: "VIDA MORAL",
+        id: 4, title: "FOCADOS NAS PROMESSAS E FIRMADOS NA VERDADE",
         block: "BLOCO 02 - RELAÇÃO CONSIGO MESMO",
         color: "#a3d9c9", blockColor: "#6abf9f",
-        items: ["Santidade", "Honestidade", "Verdade", "Caráter mudado", "Fugir do mal"]
+        items: [
+            "Que a igreja permaneça firme na Palavra de Deus",
+            "Líderes ministrem a verdade com coragem e fidelidade",
+            "Jovens guardados das mentiras deste tempo",
+            "Palavra de Cristo habite abundantemente na igreja",
+            "Que as promessas de Deus se cumpram sobre o povo"
+        ]
     },
     {
-        id: 5, title: "VIDA FINANCEIRA",
+        id: 5, title: "DE VOLTA À ESSÊNCIA (EVANGELHO)",
         block: "BLOCO 02 - RELAÇÃO CONSIGO MESMO",
         color: "#8bcba4", blockColor: "#6abf9f",
-        items: ["Praticar o orçamento", "Saber ganhar", "Saber gastar", "Saber guardar", "Ser fiel a Deus"]
+        items: [
+            "Que a igreja volte ao centro do Evangelho de Cristo",
+            "Vidas alcançadas pelas boas novas da salvação",
+            "Que o arrependimento genuíno alcance corações",
+            "Amor por Jesus renovado na igreja",
+            "Evangelho pregado com poder e simplicidade"
+        ]
     },
     {
-        id: 6, title: "VIDA FÍSICA",
+        id: 6, title: "FÉ QUE MUDA CENÁRIOS",
         block: "BLOCO 02 - RELAÇÃO CONSIGO MESMO",
         color: "#a1d5c2", blockColor: "#6abf9f",
-        items: ["Cuidar da saúde", "Comer saudavelmente", "Praticar exercícios", "Dormir bem", "Evitar exageros"]
+        items: [
+            "Deus fortaleça a fé da igreja em tempos difíceis",
+            "Milagres e intervenções sobrenaturais aconteçam",
+            "Famílias restauradas pela fé em Deus",
+            "Enfermidades e opressões quebradas pelo poder do Senhor",
+            "Igreja vivendo uma fé ativa e ousada"
+        ]
     },
     {
-        id: 7, title: "VIDA FAMILIAR",
+        id: 7, title: "DESERTO, LUGAR DE ENCONTRO",
         block: "BLOCO 03 - RELAÇÃO COM OS OUTROS",
         color: "#fabb61", blockColor: "#f29c38",
-        items: ["Pelo cônjuge", "Pelos filhos/irmãos", "Pelos pais", "Perdão na família", "Por harmonia no lar"]
+        items: [
+            "Transformação de momentos difíceis em encontros com Ele",
+            "Pessoas feridas encontrem cura na presença do Senhor",
+            "Deus fortaleça aqueles que estão passando por provas",
+            "Espírito Santo fale nos desertos da vida",
+            "Maturidade espiritual produzida pelo deserto na igreja"
+        ]
     },
     {
-        id: 8, title: "VIDA SENTIMENTAL",
+        id: 8, title: "CONHECER JESUS E SUA PALAVRA",
         block: "BLOCO 03 - RELAÇÃO COM OS OUTROS",
         color: "#f5af53", blockColor: "#f29c38",
-        items: ["Amar de verdade", "Ser fiel", "Saber perdoar", "Falar com calma", "Bom ouvinte"]
+        items: [
+            "Fome profunda pela Palavra de Deus em toda a igreja",
+            "Crianças do AMI crescendo conhecendo Jesus desde cedo",
+            "Adolescentes e jovens apaixonados pela verdade bíblica",
+            "Ensino da Palavra transformando vidas",
+            "Cada membro com intimidade real com Cristo"
+        ]
     },
     {
-        id: 9, title: "VIDA SOCIAL",
+        id: 9, title: "EU CREIO",
         block: "BLOCO 03 - RELAÇÃO COM OS OUTROS",
         color: "#f2ab4b", blockColor: "#f29c38",
-        items: ["Pelos amigos", "Pelos vizinhos", "Bom testemunho", "Ganhar vidas", "Ser exemplo"]
+        items: [
+            "Que a incredulidade seja quebrada no meio da igreja",
+            "Espírito Santo renove a esperança das pessoas",
+            "Orações antigas recebendo resposta",
+            "Fé fortalecida nas famílias",
+            "Igreja caminhando confiando nas promessas de Deus"
+        ]
     },
     {
-        id: 10, title: "VIDA MINISTERIAL",
+        id: 10, title: "VOU OUVIR O QUE O MUNDO JAMAIS OUVIU",
         block: "BLOCO 04 - RELAÇÃO COM O MUNDO",
         color: "#fbe6b3", blockColor: "#ebd083",
-        items: ["Usar os dons", "Ser zeloso", "Tomar iniciativa", "Trabalhar em equipe", "Ser cooperador"]
+        items: [
+            "Profetas e intercessores sensíveis à Sua voz",
+            "Discernimento dos tempos espirituais pela igreja",
+            "Deus revelando direção para o futuro da igreja",
+            "Líderes guiados pelo Espírito Santo",
+            "Povo aprendendo a ouvir a voz de Deus"
+        ]
     },
     {
-        id: 11, title: "VIDA PROFISSIONAL",
+        id: 11, title: "A ALEGRIA DO SENHOR É NOSSA FORÇA",
         block: "BLOCO 04 - RELAÇÃO COM O MUNDO",
         color: "#fdedc7", blockColor: "#ebd083",
-        items: ["Ser pontual", "Ser capaz", "Ser honesto", "Ser valorizado", "Ser proativo"]
+        items: [
+            "Alegria do Espírito Santo enchendo a igreja",
+            "Pessoas cansadas renovadas espiritualmente",
+            "Louvor da igreja cheio da presença de Deus",
+            "MVPMusic ministrando com unção e alegria",
+            "Igreja vivendo uma atmosfera de celebração espiritual"
+        ]
     },
     {
-        id: 12, title: "VIDA INTELECTUAL",
+        id: 12, title: "CELEBRAÇÃO ANTECIPA O MILAGRE",
         block: "BLOCO 04 - RELAÇÃO COM O MUNDO",
         color: "#fcf1d4", blockColor: "#ebd083",
-        items: ["Pelos estudos", "Boas leituras", "Sabedoria", "Discernimento", "Mente pura"]
+        items: [
+            "Igreja aprendendo a celebrar antes da resposta",
+            "Cultos cheios da presença de Deus",
+            "Louvor preparando o ambiente para milagres",
+            "Deus realizando sinais e maravilhas no meio da igreja",
+            "Cada testemunho fortalecendo a fé do povo"
+        ]
     }
 ];
 
@@ -134,7 +206,15 @@ const describeOuterArc = (x: number, y: number, innerRadius: number, outerRadius
 export default function InteractivePrayerClock({ onBack, isAdmin = false }: { onBack?: () => void, isAdmin?: boolean }) {
     const [prayerData, setPrayerData] = useState(() => {
         const saved = localStorage.getItem('prayerData');
-        return saved ? JSON.parse(saved) : defaultPrayerData;
+        const data = saved ? JSON.parse(saved) : defaultPrayerData;
+
+        // Pequena verificação: se o título do primeiro tópico for o antigo "GRATIDÃO A DEUS",
+        // forçamos o reset para os novos dados fornecidos hoje.
+        if (data[0]?.title === "GRATIDÃO A DEUS") {
+            localStorage.removeItem('prayerData');
+            return defaultPrayerData;
+        }
+        return data;
     });
     const [isEditing, setIsEditing] = useState(false);
 
@@ -442,7 +522,7 @@ export default function InteractivePrayerClock({ onBack, isAdmin = false }: { on
                     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-fade-in duration-700">
                         <div className="text-center space-y-2">
                             <h2 className="text-3xl md:text-5xl font-black text-slate-800 dark:text-white tracking-tight">
-                                Próxima Intercessão
+                                12 horas de Intercessão
                             </h2>
                             <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">
                                 Domingo, das 06:00 às 18:00
