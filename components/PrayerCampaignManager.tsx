@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Play, Pause, Clock, Users, Calendar, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Play, Pause, Clock, Users, Calendar, Edit2, Download } from 'lucide-react';
 import { createPrayerCampaign, getPrayerCampaigns, toggleCampaignStatus, deleteCampaign, getPrayerSignups, updatePrayerCampaign } from '../services/db';
 import { PrayerCampaign, PrayerSignup } from '../types';
 import { PRAYER_SLOT_NAMES } from '../constants';
@@ -166,7 +166,36 @@ export function PrayerCampaignManager() {
                 </div>
 
                 <div className="mt-4">
-                    <h5 className="font-semibold text-sm mb-2">Lista de Inscritos</h5>
+                    <div className="flex justify-between items-center mb-2">
+                        <h5 className="font-semibold text-sm">Lista de Inscritos</h5>
+                        <button
+                            onClick={() => {
+                                const headers = ['Primeiro Nome', 'Telefone', 'Horario', 'Equipe'];
+                                const rows = selectedSignups.map(s => {
+                                    const firstName = s.member?.name.split(' ')[0] || 'Desconhecido';
+                                    const phone = s.member?.phone || '-';
+                                    const date = new Date(campaign.startDate);
+                                    date.setHours(date.getHours() + s.slotNumber);
+                                    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                    const team = PRAYER_SLOT_NAMES[s.slotNumber % 12];
+                                    return [`"${firstName}"`, `"${phone}"`, `"${time}"`, `"${team}"`];
+                                });
+                                // Add BOM for proper UTF-8 handling in Excel
+                                const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+                                const encodedUri = encodeURI(csvContent);
+                                const link = document.createElement("a");
+                                link.setAttribute("href", encodedUri);
+                                link.setAttribute("download", `relogio_oracao_${campaign.title.replace(/\s+/g, '_')}.csv`);
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }}
+                            className="flex items-center gap-1 text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-200 dark:border-indigo-800"
+                        >
+                            <Download size={14} />
+                            Exportar CSV
+                        </button>
+                    </div>
                     <div className="max-h-60 overflow-y-auto border rounded bg-gray-50 dark:bg-slate-900/50 p-2 border-gray-200 dark:border-slate-700">
                         {selectedSignups.length === 0 ? (
                             <p className="text-gray-500 dark:text-gray-400 text-sm text-center">Nenhum inscrito ainda.</p>

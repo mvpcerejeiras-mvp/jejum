@@ -138,6 +138,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, onSettingsCha
             prayerInfo += `\n${hour}:00 – Intercessão na igreja`;
           }
         });
+        prayerInfo += `\n\n⚠️ *ATENÇÃO INTERCESSOR:* ⚠️`;
+        prayerInfo += `\nÉ obrigatório entrar no grupo do WhatsApp para alinhamento da escala:\n👉 https://chat.whatsapp.com/Ig1rTadt3ea59Zcx4HFv44`;
       }
     }
 

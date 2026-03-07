@@ -3,19 +3,25 @@ import { supabase } from './supabaseClient';
 import { Participant, AppSettings, Member, FastingHistory, PrayerCampaign, PrayerSignup, SystemConfig } from '../types';
 import { DEFAULT_INSTRUCTION, DEFAULT_THEME, DEFAULT_APP_TITLE, DEFAULT_LOGO, DEFAULT_DAYS } from '../constants';
 
-export const getSystemConfig = async (): Promise<{ eventMode: 'fasting' | 'prayer_clock' | 'combined' }> => {
+export const getSystemConfig = async (): Promise<{ eventMode: 'fasting' | 'prayer_clock' | 'combined', totalViews?: number }> => {
   const { data, error } = await supabase
     .from('system_config')
-    .select('event_mode')
+    .select('event_mode, total_views')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (error || !data) {
-    return { eventMode: 'fasting' };
+    return { eventMode: 'fasting', totalViews: 0 };
   }
 
-  return { eventMode: data.event_mode as any };
+  return { eventMode: data.event_mode as any, totalViews: data.total_views || 0 };
+};
+
+export const incrementPageViews = async (): Promise<{ success: boolean }> => {
+  const { error } = await supabase.rpc('increment_page_views');
+  if (error) console.error('Error incrementing views:', error);
+  return { success: !error };
 };
 
 export const saveSystemConfig = async (mode: 'fasting' | 'prayer_clock' | 'combined'): Promise<{ success: boolean }> => {

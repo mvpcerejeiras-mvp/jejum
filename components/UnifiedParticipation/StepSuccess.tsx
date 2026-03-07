@@ -213,6 +213,8 @@ export function StepSuccess({ onFinish }: { onFinish: () => void }) {
                 text += `${t} – Intercessão na igreja\n`;
             });
             text += `\n`;
+            text += `⚠️ *ATENÇÃO INTERCESSOR:* ⚠️\n`;
+            text += `É obrigatório entrar no grupo do WhatsApp para alinhamento da escala:\n👉 https://chat.whatsapp.com/Ig1rTadt3ea59Zcx4HFv44\n\n`;
         }
 
         text += `Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
