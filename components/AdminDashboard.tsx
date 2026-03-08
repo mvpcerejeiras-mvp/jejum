@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PrayerCampaignManager } from './PrayerCampaignManager';
 import { getParticipants, getSettings, saveSettings, uploadLogo, updateParticipant, deleteParticipant, getMembers, saveMember, updateMember, deleteMember, migrateParticipantsToMembers, deleteAllMembers, archiveCurrentFast, getMemberHistory, getSystemConfig, saveSystemConfig } from '../services/db';
 import { Participant, AppSettings, FastTime, Member, FastingHistory, SystemConfig } from '../types';
-import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical, Pencil, Trash, X, RefreshCw, Archive, History, Sparkles, MessageCircle, Share2 } from 'lucide-react';
+import { Download, Save, Search, LogOut, Settings, Users, BarChart3, PieChart, Activity, Clock, List, Flame, Cross, BookOpen, Heart, Sun, Mountain, Star, Trash2, Plus, GripVertical, Pencil, Trash, X, RefreshCw, Archive, History, Sparkles, MessageCircle, Share2, Send, Megaphone } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { processReminders } from '../services/reminders';
 import { sendWhatsAppMessage } from '../services/whatsapp';
@@ -247,6 +247,75 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
 
   const addDay = () => {
     setSettings({ ...settings, fastDays: [...settings.fastDays, 'Novo Dia – Tema'] });
+  };
+
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastTarget, setBroadcastTarget] = useState<'all' | ' Shalom' | ' Rhema' | ' Ágape' | ' Logos' | ' Kairós' | ' El Shaddai' | ' Adonai' | ' Hosana' | ' Aleluia' | ' Maranata' | ' Emmanuel' | ' Shekinah'>('all');
+  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
+  const [queueStats, setQueueStats] = useState({ pending: 0, sending: 0, sent: 0, error: 0 });
+
+  const fetchQueueStats = async () => {
+    const { data } = await supabase.from('message_queue').select('status');
+    const stats = { pending: 0, sending: 0, sent: 0, error: 0 };
+    data?.forEach(item => {
+      if (item.status === 'pending') stats.pending++;
+      if (item.status === 'sending') stats.sending++;
+      if (item.status === 'sent') stats.sent++;
+      if (item.status === 'error') stats.error++;
+    });
+    setQueueStats(stats);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'reminders') {
+      fetchQueueStats();
+      const interval = setInterval(fetchQueueStats, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab]);
+
+  const handleBroadcast = async () => {
+    if (!broadcastMessage.trim()) return alert('Digite uma mensagem!');
+    if (!confirm(`Deseja enfileirar esta mensagem para ${broadcastTarget === 'all' ? 'TODOS' : 'a equipe ' + broadcastTarget}?`)) return;
+
+    setIsSendingBroadcast(true);
+    try {
+      let recipients: { id: string, phone: string }[] = [];
+
+      if (broadcastTarget === 'all') {
+        const { data } = await supabase.from('members').select('id, phone');
+        recipients = data || [];
+      } else {
+        const slotIndex = PRAYER_SLOT_NAMES.indexOf(broadcastTarget.trim());
+        const { data } = await supabase
+          .from('prayer_signups')
+          .select('members(id, phone)')
+          .eq('slot_number', slotIndex);
+
+        recipients = data?.map((d: any) => d.members).filter(Boolean) || [];
+      }
+
+      if (recipients.length === 0) throw new Error('Nenhum destinatário encontrado.');
+
+      const queueItems = recipients.map(r => ({
+        member_id: r.id,
+        phone: r.phone.replace(/\D/g, "").startsWith("55") ? r.phone.replace(/\D/g, "") : "55" + r.phone.replace(/\D/g, ""),
+        content: broadcastMessage,
+        priority: 'normal',
+        metadata: { type: 'broadcast', target: broadcastTarget }
+      }));
+
+      const { error } = await supabase.from('message_queue').insert(queueItems);
+      if (error) throw error;
+
+      alert(`${queueItems.length} mensagens enfileiradas com sucesso!`);
+      setBroadcastMessage('');
+      fetchQueueStats();
+    } catch (err: any) {
+      alert('Erro ao enfileirar broadcast: ' + err.message);
+    } finally {
+      setIsSendingBroadcast(false);
+    }
   };
 
   const resetDays = () => {
@@ -1066,24 +1135,104 @@ Permaneça firme. Seu posicionamento gera resposta no céu. ✨`;
           {/* --- REMINDERS TAB --- */}
           {activeTab === 'reminders' && (
             <div className="space-y-6 animate-fade-in">
-              <div className="flex justify-between items-center bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-                <div>
-                  <h3 className="text-xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                    <Activity size={24} className="text-indigo-500" />
-                    Sistema de Lembretes Automáticos
-                  </h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
-                    O sistema envia notificações às 20h da véspera (Jejum) e 30min antes (Oração).
-                  </p>
+              {/* Status da Fila de Mensagens */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Pendentes</p>
+                  <p className="text-2xl font-black text-amber-500">{queueStats.pending}</p>
                 </div>
-                <button
-                  onClick={handleRunReminders}
-                  disabled={isProcessingReminders}
-                  className={`flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/30 transition-all active:scale-95 disabled:opacity-50 ${isProcessingReminders ? 'animate-pulse' : ''}`}
-                >
-                  {isProcessingReminders ? <RefreshCw size={20} className="animate-spin" /> : <RefreshCw size={20} />}
-                  {isProcessingReminders ? 'Processando...' : 'Processar Agora'}
-                </button>
+                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Enviando</p>
+                  <p className="text-2xl font-black text-blue-500">{queueStats.sending}</p>
+                </div>
+                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Enviadas</p>
+                  <p className="text-2xl font-black text-green-500">{queueStats.sent}</p>
+                </div>
+                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Erros</p>
+                  <p className="text-2xl font-black text-red-500">{queueStats.error}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Broadcast Form */}
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                      <Megaphone size={20} className="text-pink-500" />
+                      Broadcast Manual
+                    </h3>
+                    <p className="text-slate-500 text-xs mt-1">Envie comunicados para grupos específicos.</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-tighter text-slate-400">Destinatário</label>
+                      <select
+                        value={broadcastTarget}
+                        onChange={(e: any) => setBroadcastTarget(e.target.value)}
+                        className="w-full mt-1 p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-500/20"
+                      >
+                        <option value="all">Todos os Membros</option>
+                        {PRAYER_SLOT_NAMES.map(name => (
+                          <option key={name} value={` ${name}`}>Equipe {name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-tighter text-slate-400">Mensagem</label>
+                      <textarea
+                        value={broadcastMessage}
+                        onChange={(e) => setBroadcastMessage(e.target.value)}
+                        placeholder="Digite o comunicado aqui..."
+                        className="w-full mt-1 p-3 h-32 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-pink-500/20 resize-none font-medium"
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleBroadcast}
+                      disabled={isSendingBroadcast}
+                      className="w-full py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-pink-500/20"
+                    >
+                      {isSendingBroadcast ? <RefreshCw size={18} className="animate-spin" /> : <Send size={18} />}
+                      {isSendingBroadcast ? 'Enfileirando...' : 'Enfileirar Mensagens'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sistema info & Manual Trigger */}
+                <div className="flex flex-col gap-6">
+                  <div className="bg-indigo-600 dark:bg-indigo-700 p-6 rounded-2xl text-white shadow-lg overflow-hidden relative">
+                    <Sparkles className="absolute -right-4 -top-4 w-24 h-24 opacity-10" />
+                    <h3 className="text-lg font-black mb-2 flex items-center gap-2">
+                      Aviso de Segurança
+                    </h3>
+                    <p className="text-indigo-100 text-sm leading-relaxed">
+                      As mensagens são enviadas em fila com intervalo de <strong>30 segundos</strong>. Isso protege seu número contra bloqueios do WhatsApp.
+                    </p>
+                    <div className="mt-4 pt-4 border-t border-indigo-500/50 flex justify-between items-center">
+                      <span className="text-xs font-bold text-indigo-200">Cron Job Ativo</span>
+                      <button
+                        onClick={handleRunReminders}
+                        className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-all"
+                      >
+                        Rodar Manualmente
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-xl flex-1 flex flex-col justify-center items-center text-center space-y-2">
+                    <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mb-2">
+                      <Clock className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <h4 className="text-white font-bold">Monitor de Fila</h4>
+                    <p className="text-slate-400 text-xs px-4">
+                      O sistema limpa automaticamente mensagens enviadas há mais de 7 dias para manter o banco leve.
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">

@@ -41,11 +41,7 @@ Deno.serve(async (req) => {
                     .select('*, members(id, name, phone)')
                     .contains('days', [targetDayFullName])
 
-                let firstFasting = true
                 for (const p of (participants || [])) {
-                    if (!firstFasting) await sleep(30000)
-                    firstFasting = false
-
                     const member = p.members
                     if (!member || !member.phone) continue
 
@@ -67,13 +63,15 @@ Deno.serve(async (req) => {
                         const cleanPhone = member.phone.replace(/\D/g, "")
                         const finalPhone = cleanPhone.startsWith("55") ? cleanPhone : "55" + cleanPhone
 
-                        const res = await fetch(zApiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Client-Token': zApiToken },
-                            body: JSON.stringify({ phone: finalPhone, message: msg })
-                        })
+                        const { error: queueError } = await supabase.from('message_queue').insert([{
+                            member_id: member.id,
+                            phone: finalPhone,
+                            content: msg,
+                            priority: 'high',
+                            metadata: { type: 'fasting', target_date: targetDateStr }
+                        }])
 
-                        if (res.ok) {
+                        if (!queueError) {
                             await supabase.from('reminder_logs').insert([{
                                 member_id: member.id,
                                 type: 'fasting',
@@ -81,7 +79,7 @@ Deno.serve(async (req) => {
                             }])
                             results.fasting++
                         } else {
-                            results.errors.push(`Erro Z-API para ${member.name}`)
+                            results.errors.push(`Erro ao enfileirar para ${member.name}`)
                         }
                     }
                 }
@@ -112,11 +110,7 @@ Deno.serve(async (req) => {
                     .eq('campaign_id', campaigns.id)
                     .eq('slot_number', hoursSinceStart)
 
-                let firstPrayer = true
                 for (const s of (signups || [])) {
-                    if (!firstPrayer) await sleep(30000)
-                    firstPrayer = false
-
                     const member = s.members
                     if (!member || !member.phone) continue
 
@@ -137,13 +131,15 @@ Deno.serve(async (req) => {
                         const cleanPhone = member.phone.replace(/\D/g, "")
                         const finalPhone = cleanPhone.startsWith("55") ? cleanPhone : "55" + cleanPhone
 
-                        const res = await fetch(zApiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Client-Token': zApiToken },
-                            body: JSON.stringify({ phone: finalPhone, message: msg })
-                        })
+                        const { error: queueError } = await supabase.from('message_queue').insert([{
+                            member_id: member.id,
+                            phone: finalPhone,
+                            content: msg,
+                            priority: 'high',
+                            metadata: { type: 'prayer', target_date: targetDateKey }
+                        }])
 
-                        if (res.ok) {
+                        if (!queueError) {
                             await supabase.from('reminder_logs').insert([{
                                 member_id: member.id,
                                 type: 'prayer',
