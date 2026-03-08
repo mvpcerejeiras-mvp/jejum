@@ -1,6 +1,8 @@
 // Follow this setup guide to integrate the Deno runtime into your application:
 // https://supabase.com/docs/guides/functions/connect-to-postgres
-import { createClient } from 'https://esm.sh/@supabase/supabase-client@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 Deno.serve(async (req) => {
     try {
@@ -15,38 +17,53 @@ Deno.serve(async (req) => {
         const currentHour = now.getHours()
         const results = { fasting: 0, prayer: 0, errors: [] }
 
-        // 1. LEMBRETES DE JEJUM (20:00 da véspera)
-        if (currentHour >= 20) {
-            const tomorrow = new Date(now)
-            tomorrow.setDate(now.getDate() + 1)
-            const dayOfWeek = tomorrow.getDay()
+        // 1. LEMBRETES DE JEJUM (20:00 da véspera ou manhã cedo)
+        // Verificamos por lembretes se for noite (para amanhã) ou manhã (para hoje)
+        const isEvening = currentHour >= 20
+        const isMorning = currentHour < 10
+
+        if (isEvening || isMorning) {
+            const targetDateObj = new Date(now)
+            if (isEvening) {
+                targetDateObj.setDate(now.getDate() + 1)
+            }
+
+            const dayOfWeek = targetDateObj.getDay()
             const daysMap = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
             const searchPrefix = daysMap[dayOfWeek]
 
-            const { data: sets } = await supabase.from('settings').select('fastDays').maybeSingle()
-            const tomorrowFullName = sets?.fastDays?.find((d: string) => d.startsWith(searchPrefix))
+            const { data: sets } = await supabase.from('app_settings').select('fast_days').maybeSingle()
+            const targetDayFullName = sets?.fast_days?.find((d: string) => d.startsWith(searchPrefix))
 
-            if (tomorrowFullName) {
+            if (targetDayFullName) {
                 const { data: participants } = await supabase
                     .from('participants')
                     .select('*, members(id, name, phone)')
-                    .contains('days', [tomorrowFullName])
+                    .contains('days', [targetDayFullName])
 
+                let firstFasting = true
                 for (const p of (participants || [])) {
-                    const member = p.members
-                    if (!member) continue
+                    if (!firstFasting) await sleep(30000)
+                    firstFasting = false
 
-                    const targetDate = tomorrow.toISOString().split('T')[0]
+                    const member = p.members
+                    if (!member || !member.phone) continue
+
+                    const targetDateStr = targetDateObj.toISOString().split('T')[0]
                     const { data: existingLog } = await supabase
                         .from('reminder_logs')
                         .select('id')
                         .eq('member_id', member.id)
                         .eq('type', 'fasting')
-                        .eq('target_date', targetDate)
+                        .eq('target_date', targetDateStr)
                         .maybeSingle()
 
                     if (!existingLog) {
-                        const msg = `Olá, ${member.name}! Passando para lembrar do seu Jejum amanhã (${tomorrowFullName.split(' – ')[0]}). Que seja um tempo precioso de consagração! 🔥`
+                        const dayLabel = targetDayFullName.split(' – ')[0]
+                        const msg = isEvening
+                            ? `Olá, ${member.name}! Passando para lembrar do seu Jejum amanhã (${dayLabel}). Que seja um tempo precioso de consagração! 🔥`
+                            : `Olá, ${member.name}! Passando para lembrar que hoje é seu dia de Jejum (${dayLabel}). Que seja um tempo precioso de consagração! 🔥`
+
                         const cleanPhone = member.phone.replace(/\D/g, "")
                         const finalPhone = cleanPhone.startsWith("55") ? cleanPhone : "55" + cleanPhone
 
@@ -60,7 +77,7 @@ Deno.serve(async (req) => {
                             await supabase.from('reminder_logs').insert([{
                                 member_id: member.id,
                                 type: 'fasting',
-                                target_date: targetDate
+                                target_date: targetDateStr
                             }])
                             results.fasting++
                         } else {
@@ -75,11 +92,16 @@ Deno.serve(async (req) => {
         const { data: campaigns } = await supabase
             .from('prayer_campaigns')
             .select('*')
-            .eq('isActive', true)
+            .eq('is_active', true)
             .maybeSingle()
 
         if (campaigns) {
-            const startDate = new Date(campaigns.startDate)
+            const PRAYER_SLOT_NAMES = [
+                'Shalom', 'Rhema', 'Ágape', 'Logos', 'Kairós', 'El Shaddai',
+                'Adonai', 'Hosana', 'Aleluia', 'Maranata', 'Emmanuel', 'Shekinah'
+            ]
+            const startDate = new Date(campaigns.start_date)
+            // Olhamos 30 minutos no futuro
             const targetTime = new Date(now.getTime() + 30 * 60000)
             const hoursSinceStart = Math.floor((targetTime.getTime() - startDate.getTime()) / (3600 * 1000))
 
@@ -90,11 +112,16 @@ Deno.serve(async (req) => {
                     .eq('campaign_id', campaigns.id)
                     .eq('slot_number', hoursSinceStart)
 
+                let firstPrayer = true
                 for (const s of (signups || [])) {
-                    const member = s.members
-                    if (!member) continue
+                    if (!firstPrayer) await sleep(30000)
+                    firstPrayer = false
 
-                    const slotTimeStr = targetTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    const member = s.members
+                    if (!member || !member.phone) continue
+
+                    const slotTimeStr = targetTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Porto_Velho' })
+                    const slotName = PRAYER_SLOT_NAMES[hoursSinceStart % 12]
                     const targetDateKey = `campaign_${campaigns.id}_slot_${hoursSinceStart}`
 
                     const { data: existingLog } = await supabase
@@ -106,7 +133,7 @@ Deno.serve(async (req) => {
                         .maybeSingle()
 
                     if (!existingLog) {
-                        const msg = `Olá, ${member.name}! Seu horário de intercessão no Relógio de Oração começa em 30 minutos (${slotTimeStr}). Prepare seu coração! 🙏✨`
+                        const msg = `Olá, ${member.name}! Seu horário de intercessão no Relógio de Oração (${slotName}) começa em 30 minutos (${slotTimeStr}). Prepare seu coração! 🙏✨`
                         const cleanPhone = member.phone.replace(/\D/g, "")
                         const finalPhone = cleanPhone.startsWith("55") ? cleanPhone : "55" + cleanPhone
 
